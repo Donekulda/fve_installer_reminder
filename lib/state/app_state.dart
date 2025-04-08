@@ -1,27 +1,128 @@
 import 'package:flutter/material.dart';
+import '../data/models/user.dart';
+import '../data/models/fve_installation.dart';
+import '../data/services/database_service.dart';
 
 class AppState extends ChangeNotifier {
-  // Example global state variables
-  bool _isLoggedIn = false;
-  String _userName = '';
+  final DatabaseService _databaseService = DatabaseService();
+  User? _currentUser;
+  List<FVEInstallation> _installations = [];
+  List<User> _users = [];
+  bool _isLoading = false;
 
-  // Getter for isLoggedIn
-  bool get isLoggedIn => _isLoggedIn;
+  User? get currentUser => _currentUser;
+  List<FVEInstallation> get installations => _installations;
+  List<User> get users => _users;
+  bool get isLoading => _isLoading;
+  bool get isLoggedIn => _currentUser != null;
+  bool get isPrivileged => _currentUser?.isPrivileged ?? false;
 
-  // Setter for isLoggedIn
-  void setLoggedIn(bool value) {
-    _isLoggedIn = value;
+  Future<bool> login(String username, String password) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _databaseService.connect();
+
+      final user = await _databaseService.authenticateUser(username, password);
+      if (user != null) {
+        _currentUser = user;
+        await loadInstallations();
+        if (user.isPrivileged) {
+          await loadUsers();
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> logout() async {
+    _currentUser = null;
+    _installations = [];
+    _users = [];
+    await _databaseService.disconnect();
     notifyListeners();
   }
 
-  // Getter for userName
-  String get userName => _userName;
+  Future<void> loadInstallations() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
 
-  // Setter for userName
-  void setUserName(String value) {
-    _userName = value;
-    notifyListeners();
+      _installations = await _databaseService.getFVEInstallations();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  // Add other global states and methods as needed
+  Future<void> loadUsers() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      _users = await _databaseService.getUsers();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> addInstallation(FVEInstallation installation) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _databaseService.addFVEInstallation(installation);
+      await loadInstallations();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> addUser(User user) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _databaseService.addUser(user);
+      await loadUsers();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateUser(User user) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _databaseService.updateUser(user);
+      await loadUsers();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteUser(int userId) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _databaseService.deleteUser(userId);
+      await loadUsers();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
