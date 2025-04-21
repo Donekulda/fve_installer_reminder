@@ -50,3 +50,4 @@ app.*.map.json
 
 # Credentials
 lib/data/config/credentials.json
+lib/data/config/credentials.admin.json
