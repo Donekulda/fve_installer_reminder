@@ -1,0 +1,74 @@
+{
+  "app": {
+    "title": "FVE Instalatérský Reminder",
+    "language": "Jazyk"
+  },
+  "common": {
+    "save": "Uložit",
+    "add": "Přidat",
+    "cancel": "Zrušit",
+    "delete": "Smazat",
+    "edit": "Upravit",
+    "loading": "Načítání...",
+    "error": "Chyba",
+    "success": "Úspěch",
+    "noData": "Žádná data nenalezena",
+    "noUsers": "Žádní uživatelé k dispozici",
+    "unnamed": "Bez názvu",
+    "noAddress": "Bez adresy"
+  },
+  "error": {
+    "passwordNull": "Prosím zadejte heslo!",
+    "usernameNull": "Prosím zadejte uživatelské jméno!",
+    "installationNameNull": "Prosím zadejte název instalace",
+    "regionNull": "Prosím zadejte kraj",
+    "addressNull": "Prosím zadejte adresu",
+    "responsibleUserNull": "Prosím vyberte odpovědného uživatele",
+    "fullnameNull": "Prosím zadejte celé jméno"
+  },
+  "auth": {
+    "login": "Přihlásit",
+    "logout": "Odhlásit",
+    "username": "Uživatelské jméno",
+    "password": "Heslo",
+    "loginError": "Neplatné uživatelské jméno, heslo nebo uživatel je neaktivní"
+  },
+  "home": {
+    "welcome": "Vítejte",
+    "dashboard": "Ovládací panel",
+    "settings": "Nastavení"
+  },
+  "userManagement": {
+    "title": "Správa uživatelů",
+    "addUser": "Přidat nového uživatele",
+    "editUser": "Upravit uživatele",
+    "deleteUser": "Smazat uživatele",
+    "userList": "Seznam uživatelů",
+    "username": "Uživatelské jméno",
+    "password": "Heslo",
+    "newPassword": "Nové heslo (ponechte prázdné pro zachování současného)",
+    "fullName": "Celé jméno",
+    "privileges": "Oprávnění",
+    "visitor": "Návštěvník",
+    "regularUser": "Běžný uživatel",
+    "installer": "Instalatér",
+    "administrator": "Administrátor",
+    "activateUser": "Aktivovat uživatele",
+    "deactivateUser": "Deaktivovat uživatele",
+    "activateConfirm": "Opravdu chcete aktivovat uživatele {username}?",
+    "deactivateConfirm": "Opravdu chcete deaktivovat uživatele {username}?",
+    "activate": "Aktivovat",
+    "deactivate": "Deaktivovat",
+    "privileged": "Privilegovaný",
+    "regular": "Běžný"
+  },
+  "fve": {
+    "addInstallation": "Přidat novou instalaci",
+    "installationName": "Název instalace",
+    "region": "Kraj",
+    "address": "Adresa",
+    "responsibleUser": "Odpovědný uživatel",
+    "unnamed": "Instalace bez názvu",
+    "noAddress": "Bez adresy"
+  }
+} 

@@ -1,35 +1,60 @@
+/// Model class representing a FVE installation in the database.
+/// Contains information about the installation's location and responsible user.
 class FVEInstallation {
+  /// Unique identifier for the FVE installation
   final int id;
-  final String name;
-  final String address;
-  final DateTime installationDate;
-  final List<String> requiredPhotos;
 
+  /// Name of the FVE installation
+  final String? name;
+
+  /// Region where the FVE installation is located
+  final String? region;
+
+  /// Address of the FVE installation
+  final String? address;
+
+  /// ID of the user responsible for this installation
+  final int userId;
+
+  /// Creates a new FVEInstallation instance.
+  ///
+  /// [id] - Unique identifier for the FVE installation
+  /// [name] - Name of the FVE installation
+  /// [region] - Region where the FVE installation is located
+  /// [address] - Address of the FVE installation
+  /// [userId] - ID of the user responsible for this installation
   FVEInstallation({
     required this.id,
-    required this.name,
-    required this.address,
-    required this.installationDate,
-    required this.requiredPhotos,
+    this.name,
+    this.region,
+    this.address,
+    required this.userId,
   });
 
-  factory FVEInstallation.fromMap(Map<String, dynamic> map) {
+  /// Creates a FVEInstallation instance from a JSON map.
+  ///
+  /// [json] - Map containing the FVE installation data
+  /// Returns a new FVEInstallation instance
+  factory FVEInstallation.fromJson(Map<String, dynamic> json) {
     return FVEInstallation(
-      id: map['id'],
-      name: map['name'],
-      address: map['address'],
-      installationDate: DateTime.parse(map['installation_date']),
-      requiredPhotos: List<String>.from(map['required_photos'].split(',')),
+      id: json['id'] as int,
+      name: json['name'] as String?,
+      region: json['region'] as String?,
+      address: json['address'] as String?,
+      userId: json['users_id'] as int,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Converts the FVEInstallation instance to a JSON map.
+  ///
+  /// Returns a Map containing the FVE installation data
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
+      'region': region,
       'address': address,
-      'installation_date': installationDate.toIso8601String(),
-      'required_photos': requiredPhotos.join(','),
+      'users_id': userId,
     };
   }
-} 
+}

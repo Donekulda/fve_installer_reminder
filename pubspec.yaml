@@ -43,6 +43,7 @@ dependencies:
   intl: ^0.19.0
   flutter_localizations:
     sdk: flutter
+  flutter_translate: ^4.0.0
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +69,7 @@ flutter:
 
   assets:
     - lib/data/config/credentials.json
+    - lib/assets/translations/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

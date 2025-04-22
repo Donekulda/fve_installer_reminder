@@ -16,6 +16,7 @@ class AppState extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _currentUser != null;
   bool get isPrivileged => _currentUser?.isPrivileged ?? false;
+  DatabaseService get databaseService => _databaseService;
 
   Future<bool> login(String username, String password) async {
     try {
@@ -55,7 +56,9 @@ class AppState extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      _installations = await _databaseService.getFVEInstallations();
+      _installations =
+          await _databaseService
+              .getAllInstallations(); //everyone can view any installation, no need to check for user id as user id only represents who is responsible for the installation butz anyone can add the image
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -67,7 +70,7 @@ class AppState extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      _users = await _databaseService.getUsers();
+      _users = await _databaseService.getAllUsers();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -113,12 +116,25 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteUser(int userId) async {
+  Future<void> deactivateUser(int userId) async {
     try {
       _isLoading = true;
       notifyListeners();
 
-      await _databaseService.deleteUser(userId);
+      await _databaseService.deactivateUser(userId);
+      await loadUsers();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> activateUser(int userId) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _databaseService.activateUser(userId);
       await loadUsers();
     } finally {
       _isLoading = false;

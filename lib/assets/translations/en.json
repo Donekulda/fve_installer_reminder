@@ -1,0 +1,75 @@
+{
+  "app": {
+    "title": "FVE Installer Reminder",
+    "language": "Language"
+  },
+  "common": {
+    "save": "Save",
+    "add": "Add",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "noData": "No data found",
+    "noUsers": "No users available",
+    "unnamed": "Unnamed",
+    "noAddress": "No address",
+    "spacing": "16"
+  },
+  "error": {
+    "passwordNull": "Please enter your password",
+    "usernameNull": "Please enter your username",
+    "installationNameNull": "Please enter the installation name",
+    "regionNull": "Please enter the region",
+    "addressNull": "Please enter the address",
+    "responsibleUserNull": "Please select the responsible user",
+    "fullnameNull": "Please enter full name"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "username": "Username",
+    "password": "Password",
+    "loginError": "Invalid username, password or user is inactive"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "dashboard": "Dashboard",
+    "settings": "Settings"
+  },
+  "userManagement": {
+    "title": "User Management",
+    "addUser": "Add New User",
+    "editUser": "Edit User",
+    "deleteUser": "Delete User",
+    "userList": "User List",
+    "username": "Username",
+    "password": "Password",
+    "newPassword": "New Password (leave empty to keep current)",
+    "fullName": "Full Name",
+    "privileges": "Privileges",
+    "visitor": "Visitor",
+    "regularUser": "Regular User",
+    "installer": "Installer",
+    "administrator": "Administrator",
+    "activateUser": "Activate User",
+    "deactivateUser": "Deactivate User",
+    "activateConfirm": "Are you sure you want to activate user {username}?",
+    "deactivateConfirm": "Are you sure you want to deactivate user {username}?",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "privileged": "Privileged",
+    "regular": "Regular"
+  },
+  "fve": {
+    "addInstallation": "Add New Installation",
+    "installationName": "Installation Name",
+    "region": "Region",
+    "address": "Address",
+    "responsibleUser": "Responsible User",
+    "unnamed": "Unnamed Installation",
+    "noAddress": "No address"
+  }
+} 
