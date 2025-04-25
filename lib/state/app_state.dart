@@ -7,6 +7,7 @@ import '../localization/app_localizations.dart';
 
 class AppState extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
+  final _logger = AppLogger('AppState');
   User? _currentUser;
   List<FVEInstallation> _installations = [];
   List<User> _users = [];
@@ -162,29 +163,23 @@ class AppState extends ChangeNotifier {
   /// Forces a complete rebuild of the entire app scaffold
   Future<void> forceRebuild() async {
     try {
-      AppLogger.debug('Forcing complete app rebuild');
-      _refreshCounter++;
+      _logger.debug('Forcing complete app rebuild');
       notifyListeners();
-      AppLogger.info('App rebuild triggered');
+      _logger.info('App rebuild triggered');
     } catch (e) {
-      AppLogger.error('Error forcing app rebuild', e);
-      rethrow;
+      _logger.error('Error forcing app rebuild', e);
     }
   }
 
   /// Handles language change and forces a complete rebuild
   Future<void> handleLanguageChange(String languageCode) async {
     try {
-      AppLogger.debug('AppState - Handling language change to: $languageCode');
+      _logger.debug('AppState - Handling language change to: $languageCode');
       _currentLanguage = languageCode;
-      _refreshCounter++;
       notifyListeners();
-      AppLogger.info(
-        'AppState - Language change handled and rebuild triggered',
-      );
+      _logger.info('Language changed to $languageCode and listeners notified');
     } catch (e) {
-      AppLogger.error('Error handling language change', e);
-      rethrow;
+      _logger.error('Error handling language change', e);
     }
   }
 }

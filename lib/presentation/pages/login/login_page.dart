@@ -17,31 +17,32 @@ class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  final _logger = AppLogger('LoginPage');
 
   @override
   void initState() {
     super.initState();
-    AppLogger.debug('LoginPage initialized');
+    _logger.debug('LoginPage initialized');
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
-    AppLogger.debug('LoginPage disposed');
+    _logger.debug('LoginPage disposed');
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _handleLogin() async {
     try {
-      AppLogger.debug('Login attempt started');
+      _logger.debug('Login attempt started');
       if (!_formKey.currentState!.validate()) {
-        AppLogger.warning('Login form validation failed');
+        _logger.warning('Login form validation failed');
         return;
       }
 
+      _logger.debug('Login attempt in progress');
       setState(() => _isLoading = true);
-      AppLogger.debug('Login attempt in progress');
 
       try {
         final success = await context.read<AppState>().login(
@@ -50,51 +51,53 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         if (!mounted) {
-          AppLogger.warning(
+          _logger.warning(
             'Login attempt completed but widget is no longer mounted',
           );
           return;
         }
 
         if (!success) {
-          AppLogger.warning('Login attempt failed');
+          _logger.warning('Login attempt failed - Invalid credentials');
+          _logger.warning('Login attempt failed');
           _showErrorSnackBar(translate('auth.loginError'));
         } else {
-          AppLogger.info('Login successful');
+          _logger.info('Login successful');
         }
       } catch (e, stackTrace) {
-        AppLogger.error('Login attempt failed with error', e, stackTrace);
+        _logger.error('Login attempt failed with error', e, stackTrace);
         if (mounted) {
           _showErrorSnackBar(translate('auth.loginError'));
         }
       } finally {
         if (mounted) {
           setState(() => _isLoading = false);
-          AppLogger.debug('Login attempt completed');
+          _logger.debug('Login attempt completed');
         }
       }
     } catch (e, stackTrace) {
-      AppLogger.error('Unexpected error in login process', e, stackTrace);
+      _logger.error('Unexpected error in login process', e, stackTrace);
       if (mounted) {
-        _showErrorSnackBar(translate('auth.loginError'));
+        _showErrorSnackBar('An unexpected error occurred during login');
       }
     }
   }
 
   void _showErrorSnackBar(String message) {
     try {
+      _logger.debug('Showing error snackbar: $message');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error showing error snackbar', e, stackTrace);
+      _logger.error('Error showing error snackbar', e, stackTrace);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     try {
-      AppLogger.debug('LoginPage building');
+      _logger.debug('LoginPage building');
       return Scaffold(
         appBar: AppBar(
           title: Text(translate('app.title')),
@@ -105,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
             // Use currentLanguage to force rebuilds
             final currentLanguage = appState.currentLanguage;
 
-            AppLogger.debug(
+            _logger.debug(
               'LoginPage - Building with language: $currentLanguage',
             );
 
@@ -139,9 +142,9 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building LoginPage', e, stackTrace);
-      return Scaffold(
-        body: Center(child: Text('Error loading login page: $e')),
+      _logger.error('Error building LoginPage', e, stackTrace);
+      return const Scaffold(
+        body: Center(child: Text('Error loading login page')),
       );
     }
   }
@@ -156,15 +159,20 @@ class _LoginPageState extends State<LoginPage> {
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
-            AppLogger.debug('Username validation failed: empty value');
+            _logger.debug('Username validation failed: empty value');
             return translate('error.usernameNull');
           }
           return null;
         },
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building username field', e, stackTrace);
-      return const Text('Error loading username field');
+      _logger.error('Error building username field', e, stackTrace);
+      return const TextField(
+        decoration: InputDecoration(
+          labelText: 'Username',
+          errorText: 'Error loading field',
+        ),
+      );
     }
   }
 
@@ -179,15 +187,20 @@ class _LoginPageState extends State<LoginPage> {
         obscureText: true,
         validator: (value) {
           if (value == null || value.isEmpty) {
-            AppLogger.debug('Password validation failed: empty value');
+            _logger.debug('Password validation failed: empty value');
             return translate('error.passwordNull');
           }
           return null;
         },
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building password field', e, stackTrace);
-      return const Text('Error loading password field');
+      _logger.error('Error building password field', e, stackTrace);
+      return const TextField(
+        decoration: InputDecoration(
+          labelText: 'Password',
+          errorText: 'Error loading field',
+        ),
+      );
     }
   }
 
@@ -197,7 +210,7 @@ class _LoginPageState extends State<LoginPage> {
         width: double.infinity,
         height: 48,
         child: ElevatedButton(
-          onPressed: _isLoading ? null : _login,
+          onPressed: _isLoading ? null : _handleLogin,
           child:
               _isLoading
                   ? const CircularProgressIndicator()
@@ -205,8 +218,8 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building login button', e, stackTrace);
-      return const Text('Error loading login button');
+      _logger.error('Error building login button', e, stackTrace);
+      return ElevatedButton(onPressed: null, child: const Text('Login'));
     }
   }
 }

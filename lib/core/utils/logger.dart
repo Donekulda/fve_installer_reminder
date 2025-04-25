@@ -3,8 +3,13 @@ import 'package:flutter/foundation.dart';
 import '../config/config.dart';
 
 class AppLogger {
-  static final Logger _logger = Logger('AppLogger');
+  final String source;
+  late final Logger _logger;
   static bool _isInitialized = false;
+
+  AppLogger(this.source) {
+    _logger = Logger(source);
+  }
 
   static void initialize() {
     if (!_isInitialized) {
@@ -32,7 +37,7 @@ class AppLogger {
     }
   }
 
-  static void _log(
+  void _log(
     String level,
     String message, [
     Object? error,
@@ -41,7 +46,7 @@ class AppLogger {
     if (!_isInitialized) {
       // Fallback to debugPrint when logger is not initialized
       final timestamp = DateTime.now().toString().split('.').first;
-      debugPrint('[$timestamp] [$level] [AppLogger] - $message');
+      debugPrint('[$timestamp] [$level] [$source] - $message');
       if (error != null) {
         debugPrint('Error: $error');
       }
@@ -67,19 +72,19 @@ class AppLogger {
     }
   }
 
-  static void debug(String message) {
+  void debug(String message) {
     _log('DEBUG', message);
   }
 
-  static void info(String message) {
+  void info(String message) {
     _log('INFO', message);
   }
 
-  static void warning(String message, [Object? error]) {
+  void warning(String message, [Object? error]) {
     _log('WARNING', message, error);
   }
 
-  static void error(String message, [Object? error, StackTrace? stackTrace]) {
+  void error(String message, [Object? error, StackTrace? stackTrace]) {
     _log('ERROR', message, error, stackTrace);
   }
 }

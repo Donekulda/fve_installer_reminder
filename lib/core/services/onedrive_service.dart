@@ -26,9 +26,11 @@ class OneDriveService {
 
   String? _accessToken;
 
+  final _logger = AppLogger('OneDriveService');
+
   Future<void> initialize() async {
     try {
-      AppLogger.info('Initializing OneDrive service');
+      _logger.info('Initializing OneDrive service');
 
       // Load configuration from JSON file
       final configJson = await rootBundle.loadString(
@@ -42,7 +44,7 @@ class OneDriveService {
       _scope = config['scope'] as String;
       _baseFolderPath = config['baseFolderPath'] as String;
 
-      AppLogger.debug(
+      _logger.debug(
         'Loaded configuration: clientId=${_clientId.substring(0, 4)}..., tenantId=${_tenantId.substring(0, 4)}...',
       );
 
@@ -60,50 +62,54 @@ class OneDriveService {
       _accessToken = await _storage.read(key: 'onedrive_access_token');
 
       if (_accessToken == null) {
-        AppLogger.info('No stored token found, initiating authentication');
+        _logger.info('No stored token found, initiating authentication');
         await _authenticate();
       } else {
-        AppLogger.info('Using stored access token');
+        _logger.info('Using stored access token');
       }
+
+      _logger.debug(
+        'OneDriveService - Initialized with token: ${_accessToken != null}',
+      );
     } catch (e) {
-      AppLogger.error('Failed to initialize OneDrive service', e);
+      _logger.error('Failed to initialize OneDrive service', e);
       rethrow;
     }
   }
 
   Future<void> _authenticate() async {
     try {
-      AppLogger.info('Starting authentication process');
+      _logger.info('Starting authentication process');
       await _oauth.login();
       _accessToken = await _oauth.getAccessToken();
 
       if (_accessToken != null) {
-        AppLogger.info('Authentication successful, storing token');
+        _logger.info('Authentication successful, storing token');
         await _storage.write(key: 'onedrive_access_token', value: _accessToken);
       } else {
-        AppLogger.error('Authentication failed: No access token received');
+        _logger.error('Authentication failed: No access token received');
         throw Exception('Failed to get access token');
       }
     } catch (e) {
-      AppLogger.error('Authentication failed', e);
+      _logger.error('Authentication failed', e);
       rethrow;
     }
   }
 
   Future<void> _ensureAuthenticated() async {
     if (_accessToken == null) {
-      AppLogger.info('No access token, initiating authentication');
+      _logger.info('No access token, initiating authentication');
       await _authenticate();
     } else {
       // Check if token needs refresh
       try {
         final accessToken = await _oauth.getAccessToken();
         if (accessToken == null || accessToken != _accessToken) {
-          AppLogger.info('Token needs refresh, re-authenticating');
+          _logger.info('Token needs refresh, re-authenticating');
           await _authenticate();
         }
       } catch (e) {
-        AppLogger.warning('Token validation failed, re-authenticating', e);
+        _logger.warning('Token validation failed, re-authenticating', e);
         await _authenticate();
       }
     }
@@ -113,7 +119,7 @@ class OneDriveService {
     final folderPath = '$_baseFolderPath/$installationId';
 
     try {
-      AppLogger.debug('Ensuring installation folder exists: $folderPath');
+      _logger.debug('Ensuring installation folder exists: $folderPath');
       await _ensureAuthenticated();
 
       // Check if folder exists
@@ -123,7 +129,7 @@ class OneDriveService {
       );
 
       if (response.statusCode == 404) {
-        AppLogger.info('Creating installation folder: $folderPath');
+        _logger.info('Creating installation folder: $folderPath');
         // Create folder if it doesn't exist
         await http.post(
           Uri.parse('https://graph.microsoft.com/v1.0/me/drive/root/children'),
@@ -138,7 +144,7 @@ class OneDriveService {
           }),
         );
       } else if (response.statusCode != 200) {
-        AppLogger.error(
+        _logger.error(
           'Failed to check installation folder: ${response.statusCode}',
         );
         throw Exception(
@@ -148,7 +154,7 @@ class OneDriveService {
 
       return folderPath;
     } catch (e) {
-      AppLogger.error('Failed to ensure installation folder exists', e);
+      _logger.error('Failed to ensure installation folder exists', e);
       rethrow;
     }
   }
@@ -159,14 +165,14 @@ class OneDriveService {
     String? description,
   }) async {
     try {
-      AppLogger.info('Uploading image for installation: $installationId');
+      _logger.info('Uploading image for installation: $installationId');
       final folderPath = await _ensureInstallationFolder(installationId);
       final fileName =
           '${DateTime.now().millisecondsSinceEpoch}_${path.basename(imageFile.path)}';
       final endpoint =
           'https://graph.microsoft.com/v1.0/me/drive/root:$folderPath/$fileName:/content';
 
-      AppLogger.debug('Uploading file: $fileName to $folderPath');
+      _logger.debug('Uploading file: $fileName to $folderPath');
 
       final response = await http.put(
         Uri.parse(endpoint),
@@ -182,18 +188,18 @@ class OneDriveService {
 
         // If description is provided, update file metadata
         if (description != null) {
-          AppLogger.debug('Updating file description');
+          _logger.debug('Updating file description');
           await _updateFileDescription(responseData['id'], description);
         }
 
-        AppLogger.info('Image upload successful');
+        _logger.info('Image upload successful');
         return responseData['webUrl'];
       } else {
-        AppLogger.error('Failed to upload image: ${response.statusCode}');
+        _logger.error('Failed to upload image: ${response.statusCode}');
         throw Exception('Failed to upload image: ${response.statusCode}');
       }
     } catch (e) {
-      AppLogger.error('Failed to upload installation image', e);
+      _logger.error('Failed to upload installation image', e);
       rethrow;
     }
   }
@@ -212,7 +218,7 @@ class OneDriveService {
         body: jsonEncode({'description': description}),
       );
     } catch (e) {
-      AppLogger.warning('Failed to update file description', e);
+      _logger.warning('Failed to update file description', e);
       // Don't rethrow as this is not critical
     }
   }
@@ -221,7 +227,7 @@ class OneDriveService {
     String installationId,
   ) async {
     try {
-      AppLogger.info('Getting images for installation: $installationId');
+      _logger.info('Getting images for installation: $installationId');
       final folderPath = await _ensureInstallationFolder(installationId);
 
       final response = await http.get(
@@ -256,10 +262,10 @@ class OneDriveService {
           ).compareTo(DateTime.parse(a['createdDateTime'])),
         );
 
-        AppLogger.info('Found ${images.length} images');
+        _logger.info('Found ${images.length} images');
         return images;
       } else {
-        AppLogger.error(
+        _logger.error(
           'Failed to list installation images: ${response.statusCode}',
         );
         throw Exception(
@@ -267,7 +273,7 @@ class OneDriveService {
         );
       }
     } catch (e) {
-      AppLogger.error('Failed to get installation images', e);
+      _logger.error('Failed to get installation images', e);
       rethrow;
     }
   }
@@ -286,7 +292,7 @@ class OneDriveService {
         return responseData['url'];
       }
     } catch (e) {
-      AppLogger.warning('Failed to get thumbnail URL', e);
+      _logger.warning('Failed to get thumbnail URL', e);
     }
     return null;
   }
@@ -296,7 +302,7 @@ class OneDriveService {
     String fileId,
   ) async {
     try {
-      AppLogger.info(
+      _logger.info(
         'Deleting image: $fileId from installation: $installationId',
       );
       await _ensureAuthenticated();
@@ -307,13 +313,13 @@ class OneDriveService {
       );
 
       if (response.statusCode != 204) {
-        AppLogger.error('Failed to delete image: ${response.statusCode}');
+        _logger.error('Failed to delete image: ${response.statusCode}');
         throw Exception('Failed to delete image: ${response.statusCode}');
       }
 
-      AppLogger.info('Image deleted successfully');
+      _logger.info('Image deleted successfully');
     } catch (e) {
-      AppLogger.error('Failed to delete installation image', e);
+      _logger.error('Failed to delete installation image', e);
       rethrow;
     }
   }

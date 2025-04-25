@@ -12,14 +12,15 @@ import 'core/utils/logger.dart';
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    AppLogger.info('Flutter binding initialized');
 
     // Initialize logger first
     AppLogger.initialize();
-    AppLogger.info('Starting application initialization');
+    final logger = AppLogger('main');
+    logger.info('Flutter binding initialized');
+    logger.info('Starting application initialization');
 
     final delegate = await AppLocalizations.initialize();
-    AppLogger.info('Localization initialized successfully');
+    logger.info('Localization initialized successfully');
 
     runApp(
       MultiProvider(
@@ -32,9 +33,10 @@ void main() async {
         child: LocalizedApp(delegate, const MyApp()),
       ),
     );
-    AppLogger.info('Application started successfully');
+    logger.info('Application started successfully');
   } catch (e, stackTrace) {
-    AppLogger.error('Failed to initialize application', e, stackTrace);
+    final logger = AppLogger('main');
+    logger.error('Failed to initialize application', e, stackTrace);
     // Show error UI instead of crashing
     runApp(
       MaterialApp(
@@ -51,6 +53,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logger = AppLogger('MyApp');
     try {
       return MaterialApp(
         title: translate('app.title'),
@@ -70,7 +73,7 @@ class MyApp extends StatelessWidget {
         routes: {'/users': (context) => const UserManagementPage()},
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building MaterialApp', e, stackTrace);
+      logger.error('Error building MaterialApp', e, stackTrace);
       return MaterialApp(
         home: Scaffold(
           body: Center(child: Text('Error building application: $e')),
@@ -80,10 +83,11 @@ class MyApp extends StatelessWidget {
   }
 
   Locale _getCurrentLocale(BuildContext context) {
+    final logger = AppLogger('MyApp');
     try {
       return Locale(context.watch<LanguageNotifier>().currentLanguage);
     } catch (e, stackTrace) {
-      AppLogger.error('Error getting current locale', e, stackTrace);
+      logger.error('Error getting current locale', e, stackTrace);
       return const Locale('en'); // Fallback to English
     }
   }
@@ -94,6 +98,7 @@ class AppRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logger = AppLogger('AppRouter');
     try {
       return Consumer<AppState>(
         builder: (context, appState, child) {
@@ -101,7 +106,7 @@ class AppRouter extends StatelessWidget {
           final isLoggedIn = appState.isLoggedIn;
           final currentLanguage = appState.currentLanguage;
 
-          AppLogger.debug(
+          logger.debug(
             'App state changed - isLoggedIn: $isLoggedIn, language: $currentLanguage',
           );
 
@@ -112,7 +117,7 @@ class AppRouter extends StatelessWidget {
         },
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error in AppRouter', e, stackTrace);
+      logger.error('Error in AppRouter', e, stackTrace);
       return Scaffold(
         body: Center(child: Text('Error in application routing: $e')),
       );

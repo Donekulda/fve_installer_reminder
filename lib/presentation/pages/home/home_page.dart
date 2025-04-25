@@ -18,12 +18,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final _logger = AppLogger('HomePage');
   late HomeController _controller;
 
   @override
   void initState() {
     super.initState();
-    AppLogger.debug('HomePage initialized');
+    _logger.debug('HomePage initialized');
     // Load installations after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadInstallations();
@@ -38,14 +39,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    AppLogger.debug('HomePage disposed');
+    _logger.debug('HomePage disposed');
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     try {
-      AppLogger.debug('HomePage building');
+      _logger.debug('HomePage building');
       return Scaffold(
         appBar: AppBar(
           title: Text(translate('home.dashboard')),
@@ -62,7 +63,7 @@ class _HomePageState extends State<HomePage> {
             // Use currentLanguage to force rebuilds
             final currentLanguage = appState.currentLanguage;
 
-            AppLogger.debug(
+            _logger.debug(
               'HomePage - Building with user: ${appState.currentUser?.username}, language: $currentLanguage',
             );
 
@@ -110,8 +111,10 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building HomePage', e, stackTrace);
-      return Scaffold(body: Center(child: Text('Error loading home page: $e')));
+      _logger.error('Error building HomePage', e, stackTrace);
+      return const Scaffold(
+        body: Center(child: Text('Error loading home page')),
+      );
     }
   }
 }

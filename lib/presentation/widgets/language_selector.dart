@@ -13,12 +13,13 @@ class LanguageSelector extends StatefulWidget {
 }
 
 class _LanguageSelectorState extends State<LanguageSelector> {
+  final _logger = AppLogger('LanguageSelector');
   @override
   Widget build(BuildContext context) {
     try {
       return Consumer<LanguageNotifier>(
         builder: (context, languageNotifier, child) {
-          AppLogger.debug(
+          _logger.debug(
             'LanguageSelector - Current language: ${languageNotifier.currentLanguage}',
           );
           return PopupMenuButton<String>(
@@ -37,7 +38,7 @@ class _LanguageSelectorState extends State<LanguageSelector> {
         },
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building LanguageSelector', e, stackTrace);
+      _logger.error('Error building LanguageSelector', e, stackTrace);
       return const Icon(Icons.error);
     }
   }
@@ -57,7 +58,7 @@ class _LanguageSelectorState extends State<LanguageSelector> {
         ),
       ];
     } catch (e, stackTrace) {
-      AppLogger.error('Error building language menu items', e, stackTrace);
+      _logger.error('Error building language menu items', e, stackTrace);
       return [];
     }
   }
@@ -68,16 +69,16 @@ class _LanguageSelectorState extends State<LanguageSelector> {
     LanguageNotifier languageNotifier,
   ) async {
     try {
-      AppLogger.debug('LanguageSelector - Language selected: $languageCode');
+      _logger.debug('LanguageSelector - Language selected: $languageCode');
 
       // First update the language in AppLocalizations
-      await AppLocalizations.changeLanguage(context, languageCode);
-      AppLogger.info(
-        'LanguageSelector - Language changed to: ${languageNotifier.currentLanguage}',
+      AppLocalizations.changeLanguage(context, languageCode);
+      _logger.info(
+        'LanguageSelector - Language changed to: ${context.read<LanguageNotifier>().currentLanguage}',
       );
 
       if (!context.mounted) {
-        AppLogger.warning(
+        _logger.warning(
           'LanguageSelector - Context not mounted after language change',
         );
         return;
@@ -85,43 +86,42 @@ class _LanguageSelectorState extends State<LanguageSelector> {
 
       // Then handle the language change in AppState
       try {
-        await context.read<AppState>().handleLanguageChange(languageCode);
-        AppLogger.debug(
-          'LanguageSelector - App state updated with new language',
-        );
+        context.read<AppState>().handleLanguageChange(languageCode);
+        _logger.debug('LanguageSelector - App state updated with new language');
 
         // Force a rebuild of the current widget
-        setState(() {});
+        context.read<LanguageNotifier>().changeLanguage(languageCode);
       } catch (e, stackTrace) {
-        AppLogger.error(
+        _logger.error(
           'Error updating app state with new language',
           e,
           stackTrace,
         );
         // Show error to user
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error updating app with new language: $e'),
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
+        _showErrorSnackBar(context, 'Error updating app with new language: $e');
       }
     } catch (e, stackTrace) {
-      AppLogger.error(
+      _logger.error(
         'LanguageSelector - Failed to change language',
         e,
         stackTrace,
       );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error changing language: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      _showErrorSnackBar(context, 'Error changing language: $e');
+    }
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    try {
+      _logger.debug('LanguageSelector - Showing error snackbar: $message');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e, stackTrace) {
+      _logger.error(
+        'LanguageSelector - Error showing error snackbar',
+        e,
+        stackTrace,
+      );
     }
   }
 }

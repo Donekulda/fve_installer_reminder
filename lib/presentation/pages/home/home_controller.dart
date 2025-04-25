@@ -9,16 +9,17 @@ import '../../../core/utils/logger.dart';
 class HomeController {
   final BuildContext context;
   final AppState appState;
+  final _logger = AppLogger('HomeController');
 
   HomeController(this.context) : appState = context.read<AppState>();
 
   Future<void> handleLogout() async {
     try {
-      AppLogger.debug('Logout attempt started');
+      _logger.debug('Logout attempt started');
       await appState.logout();
-      AppLogger.info('Logout successful');
+      _logger.info('Logout successful');
     } catch (e, stackTrace) {
-      AppLogger.error('Error during logout', e, stackTrace);
+      _logger.error('Error during logout', e, stackTrace);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

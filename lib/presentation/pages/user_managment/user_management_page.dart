@@ -5,7 +5,15 @@ import '../../../state/app_state.dart';
 import '../../../data/models/user.dart';
 import '../../widgets/language_selector.dart';
 import '../../../core/utils/logger.dart';
+import 'user_controller.dart';
 
+/// A page that displays and manages user accounts in the system.
+///
+/// This page provides functionality to:
+/// - View a list of all users
+/// - Add new users
+/// - Edit existing users
+/// - Activate/deactivate user accounts
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
 
@@ -14,90 +22,35 @@ class UserManagementPage extends StatefulWidget {
 }
 
 class _UserManagementPageState extends State<UserManagementPage> {
+  /// Logger instance for tracking page lifecycle and errors
+  final _logger = AppLogger('UserManagementPage');
+
+  /// Controller instance for handling user-related operations
+  late UserController _userController;
+
   @override
   void initState() {
     super.initState();
-    AppLogger.debug('UserManagementPage initialized');
+    _logger.debug('UserManagementPage initialized');
+    _userController = UserController(context);
     _loadUsers();
   }
 
   @override
   void dispose() {
-    AppLogger.debug('UserManagementPage disposed');
+    _logger.debug('UserManagementPage disposed');
     super.dispose();
   }
 
+  /// Loads the initial list of users when the page is opened
   Future<void> _loadUsers() async {
-    try {
-      AppLogger.debug('Loading users');
-      await context.read<AppState>().loadUsers();
-      AppLogger.info('Users loaded successfully');
-    } catch (e, stackTrace) {
-      AppLogger.error('Error loading users', e, stackTrace);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(translate('error.loadingUsersError')),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleUserAction(
-    String action,
-    String userId, {
-    int? newPrivilege,
-  }) async {
-    try {
-      AppLogger.debug('User action started: $action for user $userId');
-      switch (action) {
-        case 'edit':
-          if (newPrivilege != null) {
-            final user = context.read<AppState>().users.firstWhere(
-              (u) => u.id.toString() == userId,
-            );
-            final updatedUser = User(
-              id: user.id,
-              username: user.username,
-              password: user.password,
-              fullname: user.fullname,
-              privileges: newPrivilege,
-              active: user.active,
-            );
-            await context.read<AppState>().updateUser(updatedUser);
-            AppLogger.info('User privileges updated successfully');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(translate('userManagement.privilegesUpdated')),
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            }
-          }
-          break;
-        default:
-          AppLogger.warning('Unknown user action: $action');
-      }
-    } catch (e, stackTrace) {
-      AppLogger.error('Error performing user action', e, stackTrace);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(translate('error.userActionError')),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
+    await _userController.loadUsers();
   }
 
   @override
   Widget build(BuildContext context) {
     try {
-      AppLogger.debug('UserManagementPage building');
+      _logger.debug('UserManagementPage building');
       return Scaffold(
         appBar: AppBar(
           title: Text(translate('userManagement.title')),
@@ -110,20 +63,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
         ),
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building UserManagementPage', e, stackTrace);
+      _logger.error('Error building UserManagementPage', e, stackTrace);
       return Scaffold(
         body: Center(child: Text('Error loading user management page: $e')),
       );
     }
   }
 
+  /// Builds the main content of the page
+  ///
+  /// This method creates a list view of users if there are any,
+  /// or displays appropriate messages if the list is empty or loading.
   Widget _buildBody() {
     try {
       return Consumer<AppState>(
         builder: (context, appState, child) {
           final currentLanguage = appState.currentLanguage;
 
-          AppLogger.debug(
+          _logger.debug(
             'Building user list with ${appState.users.length} users, language: $currentLanguage',
           );
 
@@ -145,11 +102,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
         },
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building user list', e, stackTrace);
+      _logger.error('Error building user list', e, stackTrace);
       return Center(child: Text('Error loading user list: $e'));
     }
   }
 
+  /// Builds a single user list item with edit and activate/deactivate actions
+  ///
+  /// [user] The user object to display
   Widget _buildUserListItem(dynamic user) {
     try {
       return ListTile(
@@ -174,11 +134,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
         ),
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Error building user list item', e, stackTrace);
+      _logger.error('Error building user list item', e, stackTrace);
       return const ListTile(title: Text('Error loading user'));
     }
   }
 
+  /// Shows a dialog for adding a new user
+  ///
+  /// [context] The build context
   Future<void> _showAddUserDialog(BuildContext context) async {
     final formKey = GlobalKey<FormState>();
     final usernameController = TextEditingController();
@@ -290,7 +253,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           active: true,
                         );
 
-                        await context.read<AppState>().addUser(user);
+                        await _userController.addUser(user);
                         if (mounted) {
                           Navigator.pop(context);
                         }
@@ -303,6 +266,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
     );
   }
 
+  /// Shows a dialog for editing an existing user
+  ///
+  /// [context] The build context
+  /// [user] The user to edit
   Future<void> _showEditUserDialog(BuildContext context, User user) async {
     final formKey = GlobalKey<FormState>();
     final usernameController = TextEditingController(text: user.username);
@@ -411,12 +378,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           active: user.active,
                         );
 
-                        await _handleUserAction(
+                        await _userController.handleUserAction(
                           'edit',
                           user.id.toString(),
                           newPrivilege: privileges,
                         );
-                        await context.read<AppState>().updateUser(updatedUser);
+                        await _userController.updateUser(updatedUser);
                         if (mounted) {
                           Navigator.pop(context);
                         }
@@ -429,6 +396,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
     );
   }
 
+  /// Shows a confirmation dialog for activating or deactivating a user
+  ///
+  /// [context] The build context
+  /// [user] The user to activate or deactivate
   Future<void> _showActivateDeactivateDialog(
     BuildContext context,
     User user,
@@ -461,9 +432,9 @@ class _UserManagementPageState extends State<UserManagementPage> {
               ElevatedButton(
                 onPressed: () async {
                   if (user.active) {
-                    await context.read<AppState>().deactivateUser(user.id);
+                    await _userController.deactivateUser(user.id);
                   } else {
-                    await context.read<AppState>().activateUser(user.id);
+                    await _userController.activateUser(user.id);
                   }
                   if (mounted) {
                     Navigator.pop(context);
