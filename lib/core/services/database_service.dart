@@ -1,9 +1,9 @@
 import 'package:mysql1/mysql1.dart';
-import '../models/user.dart';
-import '../models/required_image.dart';
-import '../models/fve_installation.dart';
-import '../models/saved_image.dart';
-import 'config_service.dart';
+import '../../data/models/user.dart';
+import '../../data/models/required_image.dart';
+import '../../data/models/fve_installation.dart';
+import '../../data/models/saved_image.dart';
+import '../config/config_service.dart';
 
 /// Service class for handling all database operations.
 /// Manages connections and provides methods for CRUD operations on all entities.

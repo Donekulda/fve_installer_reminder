@@ -1,6 +1,6 @@
 import 'base_repository.dart';
 import '../models/required_image.dart';
-import '../services/database_service.dart';
+import '../../core/services/database_service.dart';
 
 class RequiredImageRepository implements BaseRepository<RequiredImage> {
   final DatabaseService _databaseService;

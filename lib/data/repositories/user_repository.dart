@@ -1,6 +1,6 @@
 import 'base_repository.dart';
 import '../models/user.dart';
-import '../services/database_service.dart';
+import '../../core/services/database_service.dart';
 
 class UserRepository implements BaseRepository<User> {
   final DatabaseService _databaseService;

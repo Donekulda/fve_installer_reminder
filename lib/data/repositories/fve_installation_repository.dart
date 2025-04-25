@@ -1,6 +1,6 @@
 import 'base_repository.dart';
 import '../models/fve_installation.dart';
-import '../services/database_service.dart';
+import '../../core/services/database_service.dart';
 
 class FVEInstallationRepository implements BaseRepository<FVEInstallation> {
   final DatabaseService _databaseService;

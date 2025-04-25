@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "FVE Instalatérský Reminder",
+    "title": "FVE Instalátor Reminder",
     "language": "Jazyk"
   },
   "common": {
@@ -13,13 +13,13 @@
     "error": "Chyba",
     "success": "Úspěch",
     "noData": "Žádná data nenalezena",
-    "noUsers": "Žádní uživatelé k dispozici",
+    "noUsers": "Žádní uživatelé nenalezeni",
     "unnamed": "Bez názvu",
     "noAddress": "Bez adresy"
   },
   "error": {
-    "passwordNull": "Prosím zadejte heslo!",
-    "usernameNull": "Prosím zadejte uživatelské jméno!",
+    "passwordNull": "Heslo nemůže být prázdné",
+    "usernameNull": "Uživatelské jméno nemůže být prázdné",
     "installationNameNull": "Prosím zadejte název instalace",
     "regionNull": "Prosím zadejte kraj",
     "addressNull": "Prosím zadejte adresu",
@@ -40,18 +40,18 @@
   },
   "userManagement": {
     "title": "Správa uživatelů",
-    "addUser": "Přidat nového uživatele",
+    "addUser": "Přidat uživatele",
     "editUser": "Upravit uživatele",
     "deleteUser": "Smazat uživatele",
     "userList": "Seznam uživatelů",
     "username": "Uživatelské jméno",
     "password": "Heslo",
-    "newPassword": "Nové heslo (ponechte prázdné pro zachování současného)",
+    "newPassword": "Nové heslo",
     "fullName": "Celé jméno",
     "privileges": "Oprávnění",
     "visitor": "Návštěvník",
     "regularUser": "Běžný uživatel",
-    "installer": "Instalatér",
+    "installer": "Instalátor",
     "administrator": "Administrátor",
     "activateUser": "Aktivovat uživatele",
     "deactivateUser": "Deaktivovat uživatele",
@@ -59,8 +59,8 @@
     "deactivateConfirm": "Opravdu chcete deaktivovat uživatele {username}?",
     "activate": "Aktivovat",
     "deactivate": "Deaktivovat",
-    "privileged": "Privilegovaný",
-    "regular": "Běžný"
+    "privileged": "Privilegovaný uživatel",
+    "regular": "Běžný uživatel"
   },
   "fve": {
     "addInstallation": "Přidat novou instalaci",

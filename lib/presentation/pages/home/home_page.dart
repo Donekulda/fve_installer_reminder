@@ -6,6 +6,7 @@ import '../../../data/models/fve_installation.dart';
 import '../../../data/models/user.dart';
 import '../fve_instalation/installation_details_page.dart';
 import '../../widgets/language_selector.dart';
+import '../../../core/utils/logger.dart';
 
 /// A page that displays a list of FVE installations and allows adding new ones.
 /// Uses Provider pattern for state management and handles user authentication.
@@ -20,6 +21,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    AppLogger.debug('HomePage initialized');
     // Load installations after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadInstallations();
@@ -27,67 +29,100 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void dispose() {
+    AppLogger.debug('HomePage disposed');
+    super.dispose();
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      AppLogger.debug('Logout attempt started');
+      await context.read<AppState>().logout();
+      AppLogger.info('Logout successful');
+    } catch (e, stackTrace) {
+      AppLogger.error('Error during logout', e, stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(translate('auth.logoutError')),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(translate('home.dashboard')),
-        actions: [
-          const LanguageSelector(),
-          // Show users management button only for privileged users (admin)
-          if (context.watch<AppState>().isPrivileged)
+    try {
+      AppLogger.debug('HomePage building');
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(translate('home.dashboard')),
+          actions: [
+            const LanguageSelector(),
             IconButton(
-              icon: const Icon(Icons.people),
-              onPressed: () {
-                Navigator.pushNamed(context, '/users');
-              },
+              icon: const Icon(Icons.logout),
+              onPressed: _handleLogout,
             ),
-        ],
-      ),
-      body: Consumer<AppState>(
-        builder: (context, appState, child) {
-          // Show loading indicator while data is being fetched
-          if (appState.isLoading) {
-            return Center(child: Text(translate('common.loading')));
-          }
+          ],
+        ),
+        body: Consumer<AppState>(
+          builder: (context, appState, child) {
+            // Use currentLanguage to force rebuilds
+            final currentLanguage = appState.currentLanguage;
 
-          // Show message if no installations are found
-          if (appState.installations.isEmpty) {
-            return Center(child: Text(translate('common.noData')));
-          }
+            AppLogger.debug(
+              'HomePage - Building with user: ${appState.currentUser?.username}, language: $currentLanguage',
+            );
 
-          // Build list of existing FVE installations
-          return ListView.builder(
-            itemCount: appState.installations.length,
-            itemBuilder: (context, index) {
-              final installation = appState.installations[index];
-              return ListTile(
-                title: Text(installation.name ?? translate('fve.unnamed')),
-                subtitle: Text(
-                  installation.address ?? translate('fve.noAddress'),
-                ),
-                onTap: () {
-                  // Navigate to installation details page when tapped
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => InstallationDetailsPage(
-                            installation: installation,
-                          ),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
-      // Floating action button to add new installation
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddInstallationDialog(context),
-        child: const Icon(Icons.add),
-      ),
-    );
+            // Show loading indicator while data is being fetched
+            if (appState.isLoading) {
+              return Center(child: Text(translate('common.loading')));
+            }
+
+            // Show message if no installations are found
+            if (appState.installations.isEmpty) {
+              return Center(child: Text(translate('common.noData')));
+            }
+
+            // Build list of existing FVE installations
+            return ListView.builder(
+              itemCount: appState.installations.length,
+              itemBuilder: (context, index) {
+                final installation = appState.installations[index];
+                return ListTile(
+                  title: Text(installation.name ?? translate('fve.unnamed')),
+                  subtitle: Text(
+                    installation.address ?? translate('fve.noAddress'),
+                  ),
+                  onTap: () {
+                    // Navigate to installation details page when tapped
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => InstallationDetailsPage(
+                              installation: installation,
+                            ),
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
+        // Floating action button to add new installation
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddInstallationDialog(context),
+          child: const Icon(Icons.add),
+        ),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error('Error building HomePage', e, stackTrace);
+      return Scaffold(body: Center(child: Text('Error loading home page: $e')));
+    }
   }
 
   /// Shows a dialog for adding a new FVE installation.
@@ -155,7 +190,8 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  // User with responisibility for the installation selection dropdown
+                  /*
+                  // Dropdown for selecting the responsible user for the installation
                   Consumer<AppState>(
                     builder: (context, appState, child) {
                       if (appState.users.isEmpty) {
@@ -185,7 +221,7 @@ class _HomePageState extends State<HomePage> {
                         },
                       );
                     },
-                  ),
+                  ),*/
                 ],
               ),
             ),
