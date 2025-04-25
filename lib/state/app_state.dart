@@ -94,6 +94,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> updateInstallation(FVEInstallation installation) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _databaseService.updateFVEInstallation(installation);
+      await loadInstallations();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> addUser(User user) async {
     try {
       _isLoading = true;

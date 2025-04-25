@@ -59,7 +59,7 @@ class AppLogger {
         _logger.info(message);
         break;
       case 'WARNING':
-        _logger.warning(message);
+        _logger.warning(message, error, stackTrace);
         break;
       case 'ERROR':
         _logger.severe(message, error, stackTrace);
@@ -75,8 +75,8 @@ class AppLogger {
     _log('INFO', message);
   }
 
-  static void warning(String message) {
-    _log('WARNING', message);
+  static void warning(String message, [Object? error]) {
+    _log('WARNING', message, error);
   }
 
   static void error(String message, [Object? error, StackTrace? stackTrace]) {

@@ -48,6 +48,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Credentials
+# Configuration files with sensitive data
+lib/data/config/onedrive_config.json
 lib/data/config/credentials.json
 lib/data/config/credentials.admin.json

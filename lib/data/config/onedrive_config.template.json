@@ -1,0 +1,7 @@
+{
+  "clientId": "YOUR_CLIENT_ID",
+  "tenantId": "YOUR_TENANT_ID",
+  "redirectUri": "YOUR_REDIRECT_URI",
+  "scope": "Files.ReadWrite.All",
+  "baseFolderPath": "/FVE_Installations"
+} 
