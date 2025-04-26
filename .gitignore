@@ -52,3 +52,4 @@ app.*.map.json
 lib/data/config/onedrive_config.json
 lib/data/config/credentials.json
 lib/data/config/credentials.admin.json
+lib/data/config/credentials.user.json

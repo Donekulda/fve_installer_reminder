@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../../state/app_state.dart';
+import '../../widgets/app_top_bar.dart';
 import '../../widgets/language_selector.dart';
 import '../../../core/utils/logger.dart';
+import 'login_controller.dart';
 
+/// A page that handles user authentication through a login form.
+/// Provides username and password fields with validation and error handling.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -13,10 +17,9 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  // Form and input controllers
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  final _controller = LoginController();
   final _logger = AppLogger('LoginPage');
 
   @override
@@ -27,70 +30,23 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _controller.dispose();
     _logger.debug('LoginPage disposed');
     super.dispose();
   }
 
+  /// Handles the login process when the user submits the form
+  /// Validates the form, attempts to log in, and handles success/failure
   Future<void> _handleLogin() async {
-    try {
-      _logger.debug('Login attempt started');
-      if (!_formKey.currentState!.validate()) {
-        _logger.warning('Login form validation failed');
-        return;
-      }
-
-      _logger.debug('Login attempt in progress');
-      setState(() => _isLoading = true);
-
-      try {
-        final success = await context.read<AppState>().login(
-          _usernameController.text,
-          _passwordController.text,
-        );
-
-        if (!mounted) {
-          _logger.warning(
-            'Login attempt completed but widget is no longer mounted',
-          );
-          return;
-        }
-
-        if (!success) {
-          _logger.warning('Login attempt failed - Invalid credentials');
-          _logger.warning('Login attempt failed');
-          _showErrorSnackBar(translate('auth.loginError'));
-        } else {
-          _logger.info('Login successful');
-        }
-      } catch (e, stackTrace) {
-        _logger.error('Login attempt failed with error', e, stackTrace);
-        if (mounted) {
-          _showErrorSnackBar(translate('auth.loginError'));
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          _logger.debug('Login attempt completed');
-        }
-      }
-    } catch (e, stackTrace) {
-      _logger.error('Unexpected error in login process', e, stackTrace);
-      if (mounted) {
-        _showErrorSnackBar('An unexpected error occurred during login');
-      }
+    if (!_formKey.currentState!.validate()) {
+      _logger.warning('Login form validation failed');
+      return;
     }
-  }
 
-  void _showErrorSnackBar(String message) {
-    try {
-      _logger.debug('Showing error snackbar: $message');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
-      );
-    } catch (e, stackTrace) {
-      _logger.error('Error showing error snackbar', e, stackTrace);
+    setState(() {});
+    await _controller.handleLogin(context);
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -99,10 +55,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       _logger.debug('LoginPage building');
       return Scaffold(
-        appBar: AppBar(
-          title: Text(translate('app.title')),
-          actions: const [LanguageSelector()],
-        ),
+        appBar: const AppTopBar(),
         body: Consumer<AppState>(
           builder: (context, appState, child) {
             // Use currentLanguage to force rebuilds
@@ -120,6 +73,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // App title
                       Text(
                         translate('app.title'),
                         style: const TextStyle(
@@ -128,10 +82,13 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 32),
+                      // Username field
                       _buildUsernameField(),
                       const SizedBox(height: 16),
+                      // Password field
                       _buildPasswordField(),
                       const SizedBox(height: 24),
+                      // Login button
                       _buildLoginButton(),
                     ],
                   ),
@@ -149,21 +106,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  /// Builds the username input field with validation
+  /// Returns a TextFormField with username validation
   Widget _buildUsernameField() {
     try {
       return TextFormField(
-        controller: _usernameController,
+        controller: _controller.usernameController,
         decoration: InputDecoration(
           labelText: translate('auth.username'),
           border: const OutlineInputBorder(),
         ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            _logger.debug('Username validation failed: empty value');
-            return translate('error.usernameNull');
-          }
-          return null;
-        },
+        validator: _controller.validateUsername,
       );
     } catch (e, stackTrace) {
       _logger.error('Error building username field', e, stackTrace);
@@ -176,22 +129,18 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  /// Builds the password input field with validation
+  /// Returns a TextFormField with password validation
   Widget _buildPasswordField() {
     try {
       return TextFormField(
-        controller: _passwordController,
+        controller: _controller.passwordController,
         decoration: InputDecoration(
           labelText: translate('auth.password'),
           border: const OutlineInputBorder(),
         ),
         obscureText: true,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            _logger.debug('Password validation failed: empty value');
-            return translate('error.passwordNull');
-          }
-          return null;
-        },
+        validator: _controller.validatePassword,
       );
     } catch (e, stackTrace) {
       _logger.error('Error building password field', e, stackTrace);
@@ -204,15 +153,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  /// Builds the login button with loading state
+  /// Returns an ElevatedButton that triggers the login process
   Widget _buildLoginButton() {
     try {
       return SizedBox(
         width: double.infinity,
         height: 48,
         child: ElevatedButton(
-          onPressed: _isLoading ? null : _handleLogin,
+          onPressed: _controller.isLoading ? null : _handleLogin,
           child:
-              _isLoading
+              _controller.isLoading
                   ? const CircularProgressIndicator()
                   : Text(translate('auth.login')),
         ),

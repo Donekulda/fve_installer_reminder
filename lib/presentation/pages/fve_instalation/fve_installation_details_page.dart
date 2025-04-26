@@ -36,7 +36,7 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
   List<RequiredImage> _requiredImages = [];
 
   /// Map of required image IDs to their associated saved images
-  Map<int, List<SavedImage>> _savedImages = {};
+  final Map<int, List<SavedImage>> _savedImages = {};
 
   /// Flag indicating if the page is currently loading data
   bool _isLoading = false;

@@ -13,12 +13,10 @@ class LanguageNotifier extends ChangeNotifier {
   static final _logger = AppLogger('LanguageNotifier');
 
   Future<void> changeLanguage(String languageCode) async {
-    _logger.debug(
-      'LanguageNotifier - Changing language from $_currentLanguage to $languageCode',
-    );
+    _logger.debug('Changing language from $_currentLanguage to $languageCode');
     _currentLanguage = languageCode;
     notifyListeners();
-    _logger.debug('LanguageNotifier - Language changed to $_currentLanguage');
+    _logger.debug('Language changed to $_currentLanguage');
   }
 }
 
@@ -35,9 +33,7 @@ class AppLocalizations {
       _logger.debug('AppLocalizations - Initializing localization');
       final prefs = await SharedPreferences.getInstance();
       final savedLanguage = prefs.getString(_languageKey) ?? 'cs';
-      _logger.debug(
-        'AppLocalizations - Saved language from preferences: $savedLanguage',
-      );
+      _logger.debug('Saved language from preferences: $savedLanguage');
 
       _delegate = await LocalizationDelegate.create(
         fallbackLocale: 'cs',
@@ -46,12 +42,10 @@ class AppLocalizations {
 
       // Load the saved language
       await _delegate.load(Locale(savedLanguage));
-      _logger.debug('AppLocalizations - Loaded language: $savedLanguage');
+      _logger.debug('Loaded language: $savedLanguage');
       await _languageNotifier.changeLanguage(savedLanguage);
 
-      _logger.debug(
-        'AppLocalizations - Initialized with language: $savedLanguage',
-      );
+      _logger.debug('Initialized with language: $savedLanguage');
 
       return _delegate;
     } catch (e) {
@@ -67,32 +61,29 @@ class AppLocalizations {
     String languageCode,
   ) async {
     try {
-      _logger.debug('AppLocalizations - Changing language to: $languageCode');
+      _logger.debug('Changing language to: $languageCode');
 
       // Update shared preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_languageKey, languageCode);
-      _logger.debug(
-        'AppLocalizations - Saved language to preferences: $languageCode',
-      );
+      _logger.debug('Saved language to preferences: $languageCode');
 
       // Update flutter_translate
       await _delegate.load(Locale(languageCode));
-      _logger.debug('AppLocalizations - Loaded new language: $languageCode');
+      _logger.debug('Loaded new language: $languageCode');
 
-      // Update LanguageNotifier
-      await _languageNotifier.changeLanguage(languageCode);
+      // Schedule state updates for the next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Update LanguageNotifier
+        await _languageNotifier.changeLanguage(languageCode);
 
-      // Update AppState
-      if (context.mounted) {
-        final appState = context.read<AppState>();
-        await appState.handleLanguageChange(languageCode);
-        _logger.debug('AppLocalizations - Updated AppState with new language');
-      }
-
-      _logger.debug(
-        'AppLocalizations - Language change request sent to notifier',
-      );
+        // Update AppState
+        if (context.mounted) {
+          final appState = context.read<AppState>();
+          await appState.handleLanguageChange(languageCode);
+          _logger.debug('Updated AppState with new language');
+        }
+      });
 
       _logger.info('Language change completed successfully');
     } catch (e, stackTrace) {
@@ -104,7 +95,7 @@ class AppLocalizations {
   static String getCurrentLanguage(BuildContext context) {
     try {
       final language = context.read<LanguageNotifier>().currentLanguage;
-      _logger.debug('AppLocalizations - Getting current language: $language');
+      _logger.debug('Getting current language: $language');
       return language;
     } catch (e, stackTrace) {
       _logger.error('Error getting current language', e, stackTrace);

@@ -9,23 +9,30 @@ import 'presentation/pages/user_managment/user_management_page.dart';
 import 'localization/app_localizations.dart';
 import 'core/utils/logger.dart';
 
+/// The main entry point of the application.
+/// Initializes the Flutter binding, logger, and localization before running the app.
 void main() async {
   try {
+    // Ensure Flutter bindings are initialized
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize logger first
+    // Initialize logger first for proper error tracking
     AppLogger.initialize();
     final logger = AppLogger('main');
     logger.info('Flutter binding initialized');
     logger.info('Starting application initialization');
 
+    // Initialize localization
     final delegate = await AppLocalizations.initialize();
     logger.info('Localization initialized successfully');
 
+    // Run the application with providers for state management
     runApp(
       MultiProvider(
         providers: [
+          // Provide AppState for global state management
           ChangeNotifierProvider(create: (_) => AppState()),
+          // Provide language notifier for localization
           ChangeNotifierProvider.value(
             value: AppLocalizations.languageNotifier,
           ),
@@ -35,6 +42,7 @@ void main() async {
     );
     logger.info('Application started successfully');
   } catch (e, stackTrace) {
+    // Handle initialization errors gracefully
     final logger = AppLogger('main');
     logger.error('Failed to initialize application', e, stackTrace);
     // Show error UI instead of crashing
@@ -48,6 +56,8 @@ void main() async {
   }
 }
 
+/// The root widget of the application.
+/// Sets up the MaterialApp with theme, localization, and routing.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -57,18 +67,23 @@ class MyApp extends StatelessWidget {
     try {
       return MaterialApp(
         title: translate('app.title'),
+        // Configure app theme
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
+        // Set up localization delegates
         localizationsDelegates: [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
           LocalizedApp.of(context).delegate,
         ],
+        // Define supported locales
         supportedLocales: const [Locale('en'), Locale('cs')],
+        // Get current locale from language notifier
         locale: _getCurrentLocale(context),
+        // Set up initial route and routing
         home: const AppRouter(),
         routes: {'/users': (context) => const UserManagementPage()},
       );
@@ -82,6 +97,10 @@ class MyApp extends StatelessWidget {
     }
   }
 
+  /// Gets the current locale from the language notifier
+  ///
+  /// [context] - The build context
+  /// Returns the current locale, defaults to English if there's an error
   Locale _getCurrentLocale(BuildContext context) {
     final logger = AppLogger('MyApp');
     try {
@@ -93,6 +112,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// Handles application routing based on authentication state.
+/// Routes to LoginPage if user is not logged in, otherwise to HomePage.
 class AppRouter extends StatelessWidget {
   const AppRouter({super.key});
 
@@ -110,6 +131,7 @@ class AppRouter extends StatelessWidget {
             'App state changed - isLoggedIn: $isLoggedIn, language: $currentLanguage',
           );
 
+          // Route based on authentication state
           if (!isLoggedIn) {
             return const LoginPage();
           }

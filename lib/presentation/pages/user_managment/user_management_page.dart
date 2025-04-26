@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../../state/app_state.dart';
 import '../../../data/models/user.dart';
+import '../../widgets/app_top_bar.dart';
 import '../../widgets/language_selector.dart';
 import '../../../core/utils/logger.dart';
 import 'user_controller.dart';
@@ -52,10 +53,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
     try {
       _logger.debug('UserManagementPage building');
       return Scaffold(
-        appBar: AppBar(
-          title: Text(translate('userManagement.title')),
-          actions: const [LanguageSelector()],
-        ),
+        appBar: const AppTopBar(),
         body: _buildBody(),
         floatingActionButton: FloatingActionButton(
           onPressed: () => _showAddUserDialog(context),
@@ -253,9 +251,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           active: true,
                         );
 
+                        final currentContext = context;
                         await _userController.addUser(user);
-                        if (mounted) {
-                          Navigator.pop(context);
+                        if (mounted && currentContext.mounted) {
+                          Navigator.pop(currentContext);
                         }
                       },
                       child: Text(translate('common.add')),
@@ -378,14 +377,15 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           active: user.active,
                         );
 
+                        final currentContext = context;
                         await _userController.handleUserAction(
                           'edit',
                           user.id.toString(),
                           newPrivilege: privileges,
                         );
                         await _userController.updateUser(updatedUser);
-                        if (mounted) {
-                          Navigator.pop(context);
+                        if (mounted && currentContext.mounted) {
+                          Navigator.pop(currentContext);
                         }
                       },
                       child: Text(translate('common.save')),
@@ -431,13 +431,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
               ),
               ElevatedButton(
                 onPressed: () async {
+                  final currentContext = context;
                   if (user.active) {
                     await _userController.deactivateUser(user.id);
                   } else {
                     await _userController.activateUser(user.id);
                   }
-                  if (mounted) {
-                    Navigator.pop(context);
+                  if (mounted && currentContext.mounted) {
+                    Navigator.pop(currentContext);
                   }
                 },
                 style: ElevatedButton.styleFrom(

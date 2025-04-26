@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../../state/app_state.dart';
-import '../../../data/models/fve_installation.dart';
 import '../fve_instalation/fve_installation_details_page.dart';
-import '../../widgets/language_selector.dart';
+import '../../widgets/app_top_bar.dart';
 import '../../../core/utils/logger.dart';
 import 'home_controller.dart';
 
@@ -48,16 +47,7 @@ class _HomePageState extends State<HomePage> {
     try {
       _logger.debug('HomePage building');
       return Scaffold(
-        appBar: AppBar(
-          title: Text(translate('home.dashboard')),
-          actions: [
-            const LanguageSelector(),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _controller.handleLogout,
-            ),
-          ],
-        ),
+        appBar: const AppTopBar(),
         body: Consumer<AppState>(
           builder: (context, appState, child) {
             // Use currentLanguage to force rebuilds

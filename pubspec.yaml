@@ -48,6 +48,7 @@ dependencies:
   http: ^1.2.0
   aad_oauth: ^1.0.0  # Microsoft Azure AD OAuth package
   url_launcher: ^6.2.5
+  path: ^1.8.3
 
 dev_dependencies:
   flutter_test:

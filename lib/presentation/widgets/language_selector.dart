@@ -5,8 +5,10 @@ import '../../core/utils/logger.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../state/app_state.dart';
 
+/// A widget that provides language selection functionality through a popup menu.
+/// It allows users to switch between different languages in the application.
 class LanguageSelector extends StatefulWidget {
-  const LanguageSelector({Key? key}) : super(key: key);
+  const LanguageSelector({super.key});
 
   @override
   State<LanguageSelector> createState() => _LanguageSelectorState();
@@ -14,14 +16,17 @@ class LanguageSelector extends StatefulWidget {
 
 class _LanguageSelectorState extends State<LanguageSelector> {
   final _logger = AppLogger('LanguageSelector');
+
   @override
   Widget build(BuildContext context) {
     try {
+      // Use Consumer to rebuild only when language changes
       return Consumer<LanguageNotifier>(
         builder: (context, languageNotifier, child) {
           _logger.debug(
             'LanguageSelector - Current language: ${languageNotifier.currentLanguage}',
           );
+          // Create a popup menu button for language selection
           return PopupMenuButton<String>(
             icon: const Icon(Icons.language),
             tooltip: translate('app.language'),
@@ -43,18 +48,22 @@ class _LanguageSelectorState extends State<LanguageSelector> {
     }
   }
 
+  /// Builds the list of language options for the popup menu
+  ///
+  /// [currentLanguage] - The currently selected language code
+  /// Returns a list of PopupMenuEntry widgets for each available language
   List<PopupMenuEntry<String>> _buildLanguageMenuItems(String currentLanguage) {
     try {
       return [
         PopupMenuItem<String>(
           value: 'en',
-          child: const Text('English'),
           enabled: currentLanguage != 'en',
+          child: const Text('English'),
         ),
         PopupMenuItem<String>(
           value: 'cs',
-          child: const Text('Čeština'),
           enabled: currentLanguage != 'cs',
+          child: const Text('Čeština'),
         ),
       ];
     } catch (e, stackTrace) {
@@ -63,6 +72,11 @@ class _LanguageSelectorState extends State<LanguageSelector> {
     }
   }
 
+  /// Handles the language change when a new language is selected
+  ///
+  /// [context] - The build context
+  /// [languageCode] - The code of the selected language
+  /// [languageNotifier] - The language notifier for state management
   Future<void> _handleLanguageChange(
     BuildContext context,
     String languageCode,
@@ -77,6 +91,7 @@ class _LanguageSelectorState extends State<LanguageSelector> {
         'LanguageSelector - Language changed to: ${context.read<LanguageNotifier>().currentLanguage}',
       );
 
+      // Check if context is still valid after async operation
       if (!context.mounted) {
         _logger.warning(
           'LanguageSelector - Context not mounted after language change',
@@ -84,7 +99,7 @@ class _LanguageSelectorState extends State<LanguageSelector> {
         return;
       }
 
-      // Then handle the language change in AppState
+      // Update the language in AppState
       try {
         context.read<AppState>().handleLanguageChange(languageCode);
         _logger.debug('LanguageSelector - App state updated with new language');
@@ -110,6 +125,10 @@ class _LanguageSelectorState extends State<LanguageSelector> {
     }
   }
 
+  /// Shows an error message to the user using a SnackBar
+  ///
+  /// [context] - The build context
+  /// [message] - The error message to display
   void _showErrorSnackBar(BuildContext context, String message) {
     try {
       _logger.debug('LanguageSelector - Showing error snackbar: $message');
