@@ -3,6 +3,7 @@ import '../data/models/user.dart';
 import '../data/models/fve_installation.dart';
 import '../core/services/database_service.dart';
 import '../core/utils/logger.dart';
+import '../core/config/config.dart';
 
 /// Main application state management class that handles all global state
 /// and provides methods for state manipulation and data operations.
@@ -390,4 +391,19 @@ class AppState extends ChangeNotifier {
       rethrow;
     }
   }
+
+  /// Checks if the current user has sufficient privileges for a required privilege level
+  ///
+  /// [requiredPrivilege] The name of the required privilege level ('visitor', 'builder', 'installer', 'admin')
+  /// Returns true if the user has sufficient privileges - equal or higher, false otherwise
+  bool hasRequiredPrivilege(String requiredPrivilege) {
+    return Config.hasRequiredPrivilege(
+      currentUserPrivileges,
+      requiredPrivilege,
+    );
+  }
+
+  /// Gets the name of the current user's privilege level
+  String get currentUserPrivilegeName =>
+      Config.getPrivilegeName(currentUserPrivileges);
 }

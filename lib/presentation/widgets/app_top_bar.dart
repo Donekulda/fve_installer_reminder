@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../state/app_state.dart';
 import '../../core/utils/logger.dart';
-import '../../localization/app_localizations.dart';
 import 'language_selector.dart';
 
 /// A custom app bar widget that provides the main navigation and actions for the application.
@@ -23,7 +22,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
         builder: (context, appState, child) {
           // Get current user state
           final isLoggedIn = appState.isLoggedIn;
-          final userPrivileges = appState.currentUserPrivileges;
+          final isAdmin = appState.hasRequiredPrivilege('admin');
 
           return AppBar(
             title: Text(translate('app.title')),
@@ -32,10 +31,11 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
               const LanguageSelector(),
               // Only show these actions if user is logged in
               if (isLoggedIn) ...[
-                // User management - only visible for admin users (privilege level 3)
-                if (userPrivileges >= 3)
+                // User management - only visible for admin users
+                if (isAdmin)
                   IconButton(
                     icon: const Icon(Icons.people),
+                    tooltip: translate('app.userManagement'),
                     onPressed: () {
                       Navigator.pushNamed(context, '/users');
                     },
@@ -43,6 +43,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                 // Logout - only visible when logged in
                 IconButton(
                   icon: const Icon(Icons.logout),
+                  tooltip: translate('auth.logout'),
                   onPressed: () {
                     // Show confirmation dialog before logout
                     showDialog(

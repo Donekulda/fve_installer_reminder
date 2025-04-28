@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "FVE Installer Reminder",
-    "language": "Language"
+    "language": "Language",
+    "userManagement": "User Management"
   },
   "common": {
     "save": "Save",
@@ -16,7 +17,12 @@
     "noUsers": "No users found",
     "unnamed": "Unnamed",
     "noAddress": "No address",
-    "spacing": "16"
+    "spacing": "16",
+    "close": "Close",
+    "notSpecified": "Not specified",
+    "noInstallations": "No installations found",
+    "ok": "OK",
+    "confirm": "Confirm"
   },
   "error": {
     "passwordNull": "Password cannot be empty",
@@ -25,7 +31,15 @@
     "regionNull": "Please enter the region",
     "addressNull": "Please enter the address",
     "responsibleUserNull": "Please select the responsible user",
-    "fullnameNull": "Please enter full name"
+    "fullnameNull": "Please enter full name",
+    "invalidPassword": "Invalid password",
+    "loadingUsersError": "Error loading users",
+    "userActionError": "Error performing user action",
+    "addUserError": "Error adding user",
+    "updateUserError": "Error updating user",
+    "activateUserError": "Error activating user",
+    "deactivateUserError": "Error deactivating user",
+    "requiredImageNameNull": "Please enter the required image name"
   },
   "auth": {
     "login": "Login",
@@ -61,7 +75,12 @@
     "activate": "Activate",
     "deactivate": "Deactivate",
     "privileged": "Privileged User",
-    "regular": "Regular User"
+    "regular": "Regular User",
+    "viewPassword": "View Password",
+    "userPassword": "User Password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordMessage": "Please enter your password to view the user's password",
+    "privilegesUpdated": "User privileges updated successfully"
   },
   "fve": {
     "addInstallation": "Add New Installation",
@@ -70,6 +89,18 @@
     "address": "Address",
     "responsibleUser": "Responsible User",
     "unnamed": "Unnamed Installation",
-    "noAddress": "No address"
+    "noAddress": "No address",
+    "requiredImages": "Required Images",
+    "details": "Installation Details",
+    "uploadImage": "Upload Image",
+    "editInstallation": "Edit Installation",
+    "deleteInstallation": "Delete Installation",
+    "deleteNotAllowed": "You are not allowed to delete this installation",
+    "addRequiredImage": "Add Required Image",
+    "requiredImageName": "Required Image Name"
+  },
+  "logout": {
+    "confirm": "Confirm Logout",
+    "message": "Are you sure you want to logout?"
   }
 } 

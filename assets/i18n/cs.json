@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "FVE Instalátor Reminder",
-    "language": "Jazyk"
+    "language": "Jazyk",
+    "userManagement": "Správa uživatelů"
   },
   "common": {
     "save": "Uložit",
@@ -15,7 +16,12 @@
     "noData": "Žádná data nenalezena",
     "noUsers": "Žádní uživatelé nenalezeni",
     "unnamed": "Bez názvu",
-    "noAddress": "Bez adresy"
+    "noAddress": "Bez adresy",
+    "close": "Zavřít",
+    "notSpecified": "Není specifikováno",
+    "noInstallations": "Žádné instalace nenalezeny",
+    "ok": "OK",
+    "confirm": "Potvrdit"
   },
   "error": {
     "passwordNull": "Heslo nemůže být prázdné",
@@ -24,7 +30,15 @@
     "regionNull": "Prosím zadejte kraj",
     "addressNull": "Prosím zadejte adresu",
     "responsibleUserNull": "Prosím vyberte odpovědného uživatele",
-    "fullnameNull": "Prosím zadejte celé jméno"
+    "fullnameNull": "Prosím zadejte celé jméno",
+    "invalidPassword": "Neplatné heslo",
+    "loadingUsersError": "Chyba při načítání uživatelů",
+    "userActionError": "Chyba při provádění akce s uživatelem",
+    "addUserError": "Chyba při přidávání uživatele",
+    "updateUserError": "Chyba při aktualizaci uživatele",
+    "activateUserError": "Chyba při aktivaci uživatele",
+    "deactivateUserError": "Chyba při deaktivaci uživatele",
+    "requiredImageNameNull": "Prosím zadejte název požadovaného obrázku"
   },
   "auth": {
     "login": "Přihlásit",
@@ -60,7 +74,12 @@
     "activate": "Aktivovat",
     "deactivate": "Deaktivovat",
     "privileged": "Privilegovaný uživatel",
-    "regular": "Běžný uživatel"
+    "regular": "Běžný uživatel",
+    "viewPassword": "Zobrazit heslo",
+    "userPassword": "Heslo uživatele",
+    "confirmPassword": "Potvrdit heslo",
+    "confirmPasswordMessage": "Prosím zadejte své heslo pro zobrazení hesla uživatele",
+    "privilegesUpdated": "Oprávnění uživatele byla úspěšně aktualizována"
   },
   "fve": {
     "addInstallation": "Přidat novou instalaci",
@@ -69,6 +88,18 @@
     "address": "Adresa",
     "responsibleUser": "Odpovědný uživatel",
     "unnamed": "Instalace bez názvu",
-    "noAddress": "Bez adresy"
+    "noAddress": "Bez adresy",
+    "requiredImages": "Požadované obrázky",
+    "details": "Detaily instalace",
+    "uploadImage": "Nahrát obrázek",
+    "editInstallation": "Upravit instalaci",
+    "deleteInstallation": "Smazat instalaci",
+    "deleteNotAllowed": "Nemáte oprávnění smazat tuto instalaci",
+    "addRequiredImage": "Přidat požadovaný obrázek",
+    "requiredImageName": "Název požadovaného obrázku"
+  },
+  "logout": {
+    "confirm": "Potvrdit odhlášení",
+    "message": "Opravdu se chcete odhlásit?"
   }
 } 

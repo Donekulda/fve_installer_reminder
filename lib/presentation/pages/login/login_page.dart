@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../../state/app_state.dart';
 import '../../widgets/app_top_bar.dart';
-import '../../widgets/language_selector.dart';
 import '../../../core/utils/logger.dart';
 import 'login_controller.dart';
 

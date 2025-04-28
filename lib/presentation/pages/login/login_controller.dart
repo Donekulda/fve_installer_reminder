@@ -51,7 +51,9 @@ class LoginController {
 
         if (!success) {
           _logger.warning('Login attempt failed - Invalid credentials');
-          _showErrorSnackBar(context, translate('auth.loginError'));
+          if (context.mounted) {
+            _showErrorSnackBar(context, translate('auth.loginError'));
+          }
           return false;
         }
 
@@ -59,7 +61,9 @@ class LoginController {
         return true;
       } catch (e, stackTrace) {
         _logger.error('Login attempt failed with error', e, stackTrace);
-        _showErrorSnackBar(context, translate('auth.loginError'));
+        if (context.mounted) {
+          _showErrorSnackBar(context, translate('auth.loginError'));
+        }
         return false;
       } finally {
         isLoading = false;
@@ -67,7 +71,12 @@ class LoginController {
       }
     } catch (e, stackTrace) {
       _logger.error('Unexpected error in login process', e, stackTrace);
-      _showErrorSnackBar(context, 'An unexpected error occurred during login');
+      if (context.mounted) {
+        _showErrorSnackBar(
+          context,
+          'An unexpected error occurred during login',
+        );
+      }
       return false;
     }
   }

@@ -4,8 +4,8 @@ import 'package:flutter_translate/flutter_translate.dart';
 import '../../../state/app_state.dart';
 import '../../../data/models/user.dart';
 import '../../widgets/app_top_bar.dart';
-import '../../widgets/language_selector.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/config/config.dart';
 import 'user_controller.dart';
 
 /// A page that displays and manages user accounts in the system.
@@ -15,6 +15,8 @@ import 'user_controller.dart';
 /// - Add new users
 /// - Edit existing users
 /// - Activate/deactivate user accounts
+/// - Manage user privileges based on role hierarchy
+/// - Securely view user passwords with admin authentication
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
 
@@ -45,7 +47,18 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   /// Loads the initial list of users when the page is opened
   Future<void> _loadUsers() async {
-    await _userController.loadUsers();
+    try {
+      await _userController.loadUsers();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -105,31 +118,194 @@ class _UserManagementPageState extends State<UserManagementPage> {
     }
   }
 
+  /// Shows a dialog to confirm admin/superAdmin password before viewing user password
+  ///
+  /// [context] The build context
+  /// [user] The user whose password is being viewed
+  ///
+  /// This method implements a security measure requiring admin/superAdmin
+  /// to authenticate before viewing another user's password.
+  Future<void> _showPasswordConfirmationDialog(
+    BuildContext context,
+    User user,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final passwordController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(translate('userManagement.confirmPassword')),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(translate('userManagement.confirmPasswordMessage')),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      labelText: translate('userManagement.password'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return translate('error.passwordNull');
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(translate('common.cancel')),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) return;
+
+                  // Verify the current user's password
+                  final currentUser = context.read<AppState>().currentUser;
+                  if (currentUser?.password == passwordController.text) {
+                    Navigator.pop(context);
+                    _showUserPasswordDialog(context, user);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(translate('error.invalidPassword')),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                },
+                child: Text(translate('common.confirm')),
+              ),
+            ],
+          ),
+    );
+  }
+
+  /// Shows a dialog displaying the user's password
+  ///
+  /// [context] The build context
+  /// [user] The user whose password is being displayed
+  ///
+  /// This method displays the user's password in a clear, formatted way
+  /// after successful authentication.
+  Future<void> _showUserPasswordDialog(BuildContext context, User user) async {
+    return showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(translate('userManagement.userPassword')),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(translate('userManagement.username')),
+                Text(
+                  user.username,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Text(translate('userManagement.password')),
+                Text(
+                  user.password,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(translate('common.close')),
+              ),
+            ],
+          ),
+    );
+  }
+
   /// Builds a single user list item with edit and activate/deactivate actions
   ///
   /// [user] The user object to display
+  ///
+  /// This method handles the following privilege rules:
+  /// - SuperAdmin can edit any user and change their privileges (except own)
+  /// - Admin can edit users with lower privileges and change their privileges
+  /// - Users can edit their own profile but not their privileges
+  /// - SuperAdmin can view any user's password
+  /// - Admin can view passwords of users with lower privileges
   Widget _buildUserListItem(dynamic user) {
     try {
-      return ListTile(
-        title: Text(user.username),
-        subtitle: Text(
-          user.isPrivileged
-              ? translate('userManagement.privileged')
-              : translate('userManagement.regular'),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _showEditUserDialog(context, user),
+      return Consumer<AppState>(
+        builder: (context, appState, child) {
+          final currentUser = appState.currentUser;
+          final isSuperAdmin = appState.hasRequiredPrivilege('superAdmin');
+          final isAdmin = appState.hasRequiredPrivilege('admin');
+
+          // Determine if the current user can edit this user
+          // SuperAdmin can edit anyone
+          // Admin can edit users with lower privileges
+          // Users can edit themselves
+          final canEdit =
+              isSuperAdmin ||
+              (isAdmin && user.privileges < Config.privilegeLevels['admin']!) ||
+              (currentUser?.id == user.id);
+
+          // Determine if the current user can change privileges
+          // Can't change own privileges
+          // SuperAdmin can change anyone's privileges
+          // Admin can change privileges of users with lower privileges
+          final canChangePrivileges =
+              (isSuperAdmin ||
+                  (isAdmin &&
+                      user.privileges < Config.privilegeLevels['admin']!)) &&
+              currentUser?.id != user.id;
+
+          // Determine if the current user can view the password
+          // SuperAdmin can view any user's password
+          // Admin can view passwords of users with lower privileges
+          final canViewPassword =
+              isSuperAdmin ||
+              (isAdmin && user.privileges < Config.privilegeLevels['admin']!);
+
+          return ListTile(
+            title: Text(user.username),
+            subtitle: Text(Config.getPrivilegeName(user.privileges)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (canViewPassword)
+                  IconButton(
+                    icon: const Icon(Icons.visibility),
+                    onPressed:
+                        () => _showPasswordConfirmationDialog(context, user),
+                    tooltip: translate('userManagement.viewPassword'),
+                  ),
+                if (canEdit)
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed:
+                        () => _showEditUserDialog(
+                          context,
+                          user,
+                          canChangePrivileges: canChangePrivileges,
+                        ),
+                  ),
+                IconButton(
+                  icon: Icon(user.active ? Icons.block : Icons.check_circle),
+                  onPressed: () => _showActivateDeactivateDialog(context, user),
+                ),
+              ],
             ),
-            IconButton(
-              icon: Icon(user.active ? Icons.block : Icons.check_circle),
-              onPressed: () => _showActivateDeactivateDialog(context, user),
-            ),
-          ],
-        ),
+          );
+        },
       );
     } catch (e, stackTrace) {
       _logger.error('Error building user list item', e, stackTrace);
@@ -140,6 +316,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
   /// Shows a dialog for adding a new user
   ///
   /// [context] The build context
+  ///
+  /// This method handles the process of adding a new user to the system.
   Future<void> _showAddUserDialog(BuildContext context) async {
     final formKey = GlobalKey<FormState>();
     final usernameController = TextEditingController();
@@ -196,38 +374,59 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<int>(
-                          value: privileges,
-                          decoration: InputDecoration(
-                            labelText: translate('userManagement.privileges'),
-                            border: const OutlineInputBorder(),
-                          ),
-                          items: [
-                            DropdownMenuItem(
-                              value: 0,
-                              child: Text(translate('userManagement.visitor')),
-                            ),
-                            DropdownMenuItem(
-                              value: 1,
-                              child: Text(
-                                translate('userManagement.regularUser'),
+                        Consumer<AppState>(
+                          builder: (context, appState, child) {
+                            final isSuperAdmin = appState.hasRequiredPrivilege(
+                              'superAdmin',
+                            );
+                            final isAdmin = appState.hasRequiredPrivilege(
+                              'admin',
+                            );
+
+                            // Filter available privilege levels based on current user's privileges
+                            final availablePrivileges =
+                                Config.privilegeNames.entries.where((entry) {
+                                  // SuperAdmin can assign any privilege
+                                  if (isSuperAdmin) return true;
+                                  // Admin can assign any privilege except admin
+                                  if (isAdmin)
+                                    return entry.key <
+                                        Config.privilegeLevels['admin']!;
+                                  // Others can't assign privileges
+                                  return false;
+                                }).toList();
+
+                            // Ensure the current privilege value is valid
+                            if (!availablePrivileges.any(
+                              (entry) => entry.key == privileges,
+                            )) {
+                              // If current privilege is not available, set to the highest available privilege
+                              privileges = availablePrivileges.last.key;
+                            }
+
+                            return DropdownButtonFormField<int>(
+                              value: privileges,
+                              decoration: InputDecoration(
+                                labelText: translate(
+                                  'userManagement.privileges',
+                                ),
+                                border: const OutlineInputBorder(),
                               ),
-                            ),
-                            DropdownMenuItem(
-                              value: 2,
-                              child: Text(
-                                translate('userManagement.installer'),
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 3,
-                              child: Text(
-                                translate('userManagement.administrator'),
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() => privileges = value ?? 0);
+                              items:
+                                  availablePrivileges.map((entry) {
+                                    return DropdownMenuItem(
+                                      value: entry.key,
+                                      child: Text(
+                                        translate(
+                                          'userManagement.${entry.value}',
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                              onChanged: (value) {
+                                setState(() => privileges = value ?? 0);
+                              },
+                            );
                           },
                         ),
                       ],
@@ -269,7 +468,17 @@ class _UserManagementPageState extends State<UserManagementPage> {
   ///
   /// [context] The build context
   /// [user] The user to edit
-  Future<void> _showEditUserDialog(BuildContext context, User user) async {
+  /// [canChangePrivileges] Whether the current user can change privileges
+  ///
+  /// This method handles the following privilege rules:
+  /// - SuperAdmin can assign any privilege level
+  /// - Admin can assign any privilege level except admin
+  /// - Users cannot change their own privileges
+  Future<void> _showEditUserDialog(
+    BuildContext context,
+    User user, {
+    required bool canChangePrivileges,
+  }) async {
     final formKey = GlobalKey<FormState>();
     final usernameController = TextEditingController(text: user.username);
     final passwordController = TextEditingController();
@@ -288,6 +497,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Username field
                         TextFormField(
                           controller: usernameController,
                           decoration: InputDecoration(
@@ -302,6 +512,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           },
                         ),
                         const SizedBox(height: 16),
+                        // Password field (optional for editing)
                         TextFormField(
                           controller: passwordController,
                           decoration: InputDecoration(
@@ -311,6 +522,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           obscureText: true,
                         ),
                         const SizedBox(height: 16),
+                        // Full name field
                         TextFormField(
                           controller: fullnameController,
                           decoration: InputDecoration(
@@ -319,40 +531,74 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<int>(
-                          value: privileges,
-                          decoration: InputDecoration(
-                            labelText: translate('userManagement.privileges'),
-                            border: const OutlineInputBorder(),
+                        // Privilege selection or display
+                        if (canChangePrivileges)
+                          Consumer<AppState>(
+                            builder: (context, appState, child) {
+                              final isSuperAdmin = appState
+                                  .hasRequiredPrivilege('superAdmin');
+                              final isAdmin = appState.hasRequiredPrivilege(
+                                'admin',
+                              );
+
+                              // Filter available privilege levels based on current user's privileges
+                              final availablePrivileges =
+                                  Config.privilegeNames.entries.where((entry) {
+                                    // SuperAdmin can assign any privilege
+                                    if (isSuperAdmin) return true;
+                                    // Admin can assign any privilege except admin
+                                    if (isAdmin)
+                                      return entry.key <
+                                          Config.privilegeLevels['admin']!;
+                                    // Others can't assign privileges
+                                    return false;
+                                  }).toList();
+
+                              // Ensure the current privilege value is valid
+                              if (!availablePrivileges.any(
+                                (entry) => entry.key == privileges,
+                              )) {
+                                // If current privilege is not available, set to the highest available privilege
+                                privileges = availablePrivileges.last.key;
+                              }
+
+                              return DropdownButtonFormField<int>(
+                                value: privileges,
+                                decoration: InputDecoration(
+                                  labelText: translate(
+                                    'userManagement.privileges',
+                                  ),
+                                  border: const OutlineInputBorder(),
+                                ),
+                                items:
+                                    availablePrivileges.map((entry) {
+                                      return DropdownMenuItem(
+                                        value: entry.key,
+                                        child: Text(
+                                          translate(
+                                            'userManagement.${entry.value}',
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                onChanged: (value) {
+                                  setState(() => privileges = value ?? 0);
+                                },
+                              );
+                            },
+                          )
+                        else
+                          // Display current privilege level if user can't change it
+                          TextFormField(
+                            enabled: false,
+                            initialValue: translate(
+                              'userManagement.${Config.getPrivilegeName(user.privileges)}',
+                            ),
+                            decoration: InputDecoration(
+                              labelText: translate('userManagement.privileges'),
+                              border: const OutlineInputBorder(),
+                            ),
                           ),
-                          items: [
-                            DropdownMenuItem(
-                              value: 0,
-                              child: Text(translate('userManagement.visitor')),
-                            ),
-                            DropdownMenuItem(
-                              value: 1,
-                              child: Text(
-                                translate('userManagement.regularUser'),
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 2,
-                              child: Text(
-                                translate('userManagement.installer'),
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 3,
-                              child: Text(
-                                translate('userManagement.administrator'),
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() => privileges = value ?? 0);
-                          },
-                        ),
                       ],
                     ),
                   ),
@@ -365,6 +611,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
 
+                        // Create updated user object
                         final updatedUser = User(
                           id: user.id,
                           username: usernameController.text,
@@ -373,16 +620,22 @@ class _UserManagementPageState extends State<UserManagementPage> {
                                   ? user.password
                                   : passwordController.text,
                           fullname: fullnameController.text,
-                          privileges: privileges,
+                          privileges:
+                              canChangePrivileges
+                                  ? privileges
+                                  : user.privileges,
                           active: user.active,
                         );
 
                         final currentContext = context;
-                        await _userController.handleUserAction(
-                          'edit',
-                          user.id.toString(),
-                          newPrivilege: privileges,
-                        );
+                        // Only update privileges if user has permission
+                        if (canChangePrivileges) {
+                          await _userController.handleUserAction(
+                            'edit',
+                            user.id.toString(),
+                            newPrivilege: privileges,
+                          );
+                        }
                         await _userController.updateUser(updatedUser);
                         if (mounted && currentContext.mounted) {
                           Navigator.pop(currentContext);
@@ -400,6 +653,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
   ///
   /// [context] The build context
   /// [user] The user to activate or deactivate
+  ///
+  /// This method handles the process of activating or deactivating a user in the system.
   Future<void> _showActivateDeactivateDialog(
     BuildContext context,
     User user,

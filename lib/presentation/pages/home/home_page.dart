@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../../state/app_state.dart';
+import '../../../data/models/fve_installation.dart';
 import '../fve_instalation/fve_installation_details_page.dart';
 import '../../widgets/app_top_bar.dart';
 import '../../../core/utils/logger.dart';
@@ -52,6 +53,7 @@ class _HomePageState extends State<HomePage> {
           builder: (context, appState, child) {
             // Use currentLanguage to force rebuilds
             final currentLanguage = appState.currentLanguage;
+            final canEdit = appState.hasRequiredPrivilege('builder');
 
             _logger.debug(
               'HomePage - Building with user: ${appState.currentUser?.username}, language: $currentLanguage',
@@ -59,12 +61,12 @@ class _HomePageState extends State<HomePage> {
 
             // Show loading indicator while data is being fetched
             if (appState.isLoading) {
-              return Center(child: Text(translate('common.loading')));
+              return const Center(child: CircularProgressIndicator());
             }
 
             // Show message if no installations are found
             if (appState.installations.isEmpty) {
-              return Center(child: Text(translate('common.noData')));
+              return Center(child: Text(translate('common.noInstallations')));
             }
 
             // Build list of existing FVE installations
@@ -77,27 +79,55 @@ class _HomePageState extends State<HomePage> {
                   subtitle: Text(
                     installation.address ?? translate('fve.noAddress'),
                   ),
-                  onTap: () {
-                    // Navigate to installation details page when tapped
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => InstallationDetailsPage(
-                              installation: installation,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Edit button - only for builders and above
+                      if (canEdit)
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed:
+                              () => _showEditInstallationDialog(
+                                context,
+                                installation,
+                              ),
+                        ),
+                      // View details button - available to all users
+                      IconButton(
+                        icon: const Icon(Icons.visibility),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => InstallationDetailsPage(
+                                    installation: installation,
+                                  ),
                             ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 );
               },
             );
           },
         ),
         // Floating action button to add new installation
-        floatingActionButton: FloatingActionButton(
-          onPressed: _controller.showAddInstallationDialog,
-          child: const Icon(Icons.add),
+        floatingActionButton: Consumer<AppState>(
+          builder: (context, appState, child) {
+            final canEdit = appState.hasRequiredPrivilege('builder');
+
+            if (!canEdit) {
+              return const SizedBox.shrink();
+            }
+
+            return FloatingActionButton(
+              onPressed: () => _showAddInstallationDialog(context),
+              child: const Icon(Icons.add),
+            );
+          },
         ),
       );
     } catch (e, stackTrace) {
@@ -106,5 +136,16 @@ class _HomePageState extends State<HomePage> {
         body: Center(child: Text('Error loading home page')),
       );
     }
+  }
+
+  void _showEditInstallationDialog(
+    BuildContext context,
+    FVEInstallation installation,
+  ) {
+    // Implementation of _showEditInstallationDialog method
+  }
+
+  void _showAddInstallationDialog(BuildContext context) {
+    // Implementation of _showAddInstallationDialog method
   }
 }
