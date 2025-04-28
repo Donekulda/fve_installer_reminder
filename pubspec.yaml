@@ -50,6 +50,7 @@ dependencies:
   url_launcher: ^6.2.5
   path: ^1.8.3
   sqflite: ^2.3.2  # SQLite database for local storage
+  crypto: ^3.0.3  # For file hashing
 
 dev_dependencies:
   flutter_test:

@@ -213,6 +213,24 @@ class LocalDatabaseService {
     }
   }
 
+  /// Gets a single image by its ID
+  Future<Map<String, dynamic>?> getImageById(int id) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'local_images',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (results.isEmpty) return null;
+      return results.first;
+    } catch (e, stackTrace) {
+      _logger.error('Error getting image by ID: $id', e, stackTrace);
+      rethrow;
+    }
+  }
+
   /// Closes the database connection
   Future<void> close() async {
     if (_database != null) {

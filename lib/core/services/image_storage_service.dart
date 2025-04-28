@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:crypto/crypto.dart';
 import '../../core/utils/logger.dart';
 import '../../core/config/image_storage_config.dart';
 
@@ -18,6 +20,18 @@ class ImageStorageService {
     if (_baseDirectory != null) return _baseDirectory!;
     _baseDirectory = await _initBaseDirectory();
     return _baseDirectory!;
+  }
+
+  /// Calculates a SHA-256 hash for a file
+  Future<int> calculateFileHash(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final hash = sha256.convert(bytes);
+      return hash.toString().hashCode;
+    } catch (e, stackTrace) {
+      _logger.error('Error calculating file hash', e, stackTrace);
+      rethrow;
+    }
   }
 
   /// Initializes the base directory for storing images
