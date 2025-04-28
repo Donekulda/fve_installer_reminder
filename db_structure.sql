@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS `FVEReminderApp`.`requiredImages` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NULL,
   `min_images` int(11) NOT NULL DEFAULT 1 COMMENT 'Min ammount of required images that should be saved',
+  `description` varchar(200) DEFAULT NULL COMMENT 'Detailed description of what photos should be takes as name could be misleading',
   PRIMARY KEY (`id`),
   UNIQUE INDEX `idrequiredImages_UNIQUE` (`id` ASC) VISIBLE)
 ENGINE = InnoDB;

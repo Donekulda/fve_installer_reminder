@@ -56,11 +56,7 @@ class AppState extends ChangeNotifier {
       if (user != null) {
         _currentUser = user;
         _logger.info('User logged in successfully: ${user.username}');
-        // Load initial data after successful login
-        await loadInstallations();
-        if (user.isPrivileged) {
-          await loadUsers();
-        }
+        await _loadInitialData(user);
         return true;
       }
       _logger.warning('Login failed for user: $username - Invalid credentials');
@@ -74,21 +70,47 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Loads initial data after successful login
+  Future<void> _loadInitialData(User user) async {
+    try {
+      _logger.debug('Loading initial data for user: ${user.username}');
+      await loadInstallations();
+      if (user.isPrivileged) {
+        await loadUsers();
+      }
+      _logger.info(
+        'Initial data loaded successfully for user: ${user.username}',
+      );
+    } catch (e, stackTrace) {
+      _logger.error(
+        'Error loading initial data for user: ${user.username}',
+        e,
+        stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   /// Logs out the current user and cleans up the application state
   Future<void> logout() async {
     try {
       _logger.debug('Logging out user: ${_currentUser?.username}');
-      // Clear all state data
+      // Schedule the state update for the next frame
+      _isLoading = true;
+      notifyListeners();
+
       _currentUser = null;
       _installations = [];
       _users = [];
-      // Disconnect from the database
       await _databaseService.disconnect();
+
       _logger.info('User logged out successfully');
-      notifyListeners();
     } catch (e, stackTrace) {
       _logger.error('Error during logout', e, stackTrace);
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -397,13 +419,29 @@ class AppState extends ChangeNotifier {
   /// [requiredPrivilege] The name of the required privilege level ('visitor', 'builder', 'installer', 'admin')
   /// Returns true if the user has sufficient privileges - equal or higher, false otherwise
   bool hasRequiredPrivilege(String requiredPrivilege) {
-    return Config.hasRequiredPrivilege(
-      currentUserPrivileges,
-      requiredPrivilege,
-    );
+    try {
+      _logger.debug('Checking privileges for: $requiredPrivilege');
+      final hasPrivilege = Config.hasRequiredPrivilege(
+        currentUserPrivileges,
+        requiredPrivilege,
+      );
+      _logger.info('Privilege check result: $hasPrivilege');
+      return hasPrivilege;
+    } catch (e, stackTrace) {
+      _logger.error('Error checking privileges', e, stackTrace);
+      return false;
+    }
   }
 
   /// Gets the name of the current user's privilege level
-  String get currentUserPrivilegeName =>
-      Config.getPrivilegeName(currentUserPrivileges);
+  String get currentUserPrivilegeName {
+    try {
+      final privilegeName = Config.getPrivilegeName(currentUserPrivileges);
+      _logger.debug('Current user privilege name: $privilegeName');
+      return privilegeName;
+    } catch (e, stackTrace) {
+      _logger.error('Error getting privilege name', e, stackTrace);
+      return 'unknown';
+    }
+  }
 }

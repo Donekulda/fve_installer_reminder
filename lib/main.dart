@@ -6,6 +6,7 @@ import 'state/app_state.dart';
 import 'presentation/pages/login_page.dart';
 import 'presentation/pages/home_page.dart';
 import 'presentation/pages/user_management_page.dart';
+import 'presentation/pages/required_image_model_page.dart';
 import 'localization/app_localizations.dart';
 import 'core/utils/logger.dart';
 
@@ -85,7 +86,11 @@ class MyApp extends StatelessWidget {
         locale: _getCurrentLocale(context),
         // Set up initial route and routing
         home: const AppRouter(),
-        routes: {'/users': (context) => const UserManagementPage()},
+        routes: {
+          '/users': (context) => const UserManagementPage(),
+          '/required-image-managment':
+              (context) => const RequiredImageModelPage(),
+        },
       );
     } catch (e, stackTrace) {
       logger.error('Error building MaterialApp', e, stackTrace);

@@ -227,8 +227,8 @@ class DatabaseService {
     if (!_isConnected) throw Exception('Database not connected');
 
     await _connection.query(
-      'INSERT INTO requiredImages (name, min_images) VALUES (?, ?)',
-      [image.name, image.minImages],
+      'INSERT INTO requiredImages (name, min_images, description) VALUES (?, ?, ?)',
+      [image.name, image.minImages, image.description],
     );
   }
 
@@ -238,8 +238,8 @@ class DatabaseService {
     if (!_isConnected) throw Exception('Database not connected');
 
     await _connection.query(
-      'UPDATE requiredImages SET name = ?, min_images = ? WHERE id = ?',
-      [image.name, image.minImages, image.id],
+      'UPDATE requiredImages SET name = ?, min_images = ?, description = ? WHERE id = ?',
+      [image.name, image.minImages, image.description, image.id],
     );
   }
 

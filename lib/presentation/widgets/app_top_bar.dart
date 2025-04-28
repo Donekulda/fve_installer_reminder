@@ -31,6 +31,14 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
               const LanguageSelector(),
               // Only show these actions if user is logged in
               if (isLoggedIn) ...[
+                // Required image models management - only visible for admin users
+                if (isAdmin)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/required-image-managment');
+                    },
+                    child: Text(translate('required_images.management.title')),
+                  ),
                 // User management - only visible for admin users
                 if (isAdmin)
                   IconButton(
