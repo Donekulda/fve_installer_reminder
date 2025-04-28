@@ -21,7 +21,11 @@
     "notSpecified": "Není specifikováno",
     "noInstallations": "Žádné instalace nenalezeny",
     "ok": "OK",
-    "confirm": "Potvrdit"
+    "confirm": "Potvrdit",
+    "error_loading_data": "Chyba při načítání dat",
+    "error_saving_data": "Chyba při ukládání dat",
+    "error_deleting_data": "Chyba při mazání dat",
+    "unauthorized": "Nemáte oprávnění k této akci"
   },
   "error": {
     "passwordNull": "Heslo nemůže být prázdné",
@@ -101,5 +105,20 @@
   "logout": {
     "confirm": "Potvrdit odhlášení",
     "message": "Opravdu se chcete odhlásit?"
+  },
+  "required_images": {
+    "management": {
+      "title": "Správa požadovaných obrázků",
+      "name": "Název",
+      "name_required": "Název je povinný",
+      "min_images": "Minimální počet obrázků",
+      "min_images_required": "Minimální počet obrázků je povinný",
+      "min_images_invalid": "Minimální počet obrázků musí být číslo",
+      "description": "Popis",
+      "description_required": "Popis je povinný",
+      "add": "Přidat požadovaný obrázek",
+      "min_images_count": "Minimální počet obrázků: {count}",
+      "delete_confirm": "Opravdu chcete smazat tento požadovaný obrázek?"
+    }
   }
 } 
