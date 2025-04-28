@@ -26,6 +26,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
           return AppBar(
             title: Text(translate('app.title')),
+            leading: _buildCloudStatusIndicator(appState),
             actions: [
               // Language selector is always visible
               const LanguageSelector(),
@@ -89,5 +90,43 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       logger.error('Error building AppTopBar', e, stackTrace);
       return AppBar(title: const Text('Error'));
     }
+  }
+
+  Widget _buildCloudStatusIndicator(AppState appState) {
+    Color iconColor;
+    Widget icon;
+
+    switch (appState.cloudStatus) {
+      case CloudStatus.disconnected:
+        iconColor = Colors.red;
+        icon = const Icon(Icons.cloud_off);
+        break;
+      case CloudStatus.connected:
+        iconColor = Colors.blue;
+        icon = const Icon(Icons.cloud);
+        break;
+      case CloudStatus.syncing:
+        iconColor = Colors.green;
+        icon = Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(Icons.cloud),
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              ),
+            ),
+          ],
+        );
+        break;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: IconTheme(data: IconThemeData(color: iconColor), child: icon),
+    );
   }
 }

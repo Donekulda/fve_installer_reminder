@@ -8,6 +8,7 @@ import 'package:aad_oauth/model/config.dart';
 import 'package:path/path.dart' as path;
 import '../config/config_service.dart';
 import '../utils/logger.dart';
+import '../../state/app_state.dart';
 
 class OneDriveService {
   static final OneDriveService _instance = OneDriveService._internal();
@@ -25,8 +26,13 @@ class OneDriveService {
   late final String _baseFolderPath;
 
   String? _accessToken;
+  AppState? _appState;
 
   final _logger = AppLogger('OneDriveService');
+
+  void setAppState(AppState appState) {
+    _appState = appState;
+  }
 
   Future<void> initialize() async {
     try {
@@ -62,6 +68,7 @@ class OneDriveService {
         await _authenticate();
       } else {
         _logger.info('Using stored access token');
+        _appState?.updateCloudStatus(CloudStatus.connected);
       }
 
       _logger.debug(
@@ -69,6 +76,7 @@ class OneDriveService {
       );
     } catch (e) {
       _logger.error('Failed to initialize OneDrive service', e);
+      _appState?.updateCloudStatus(CloudStatus.disconnected);
       rethrow;
     }
   }
@@ -82,12 +90,15 @@ class OneDriveService {
       if (_accessToken != null) {
         _logger.info('Authentication successful, storing token');
         await _storage.write(key: 'onedrive_access_token', value: _accessToken);
+        _appState?.updateCloudStatus(CloudStatus.connected);
       } else {
         _logger.error('Authentication failed: No access token received');
+        _appState?.updateCloudStatus(CloudStatus.disconnected);
         throw Exception('Failed to get access token');
       }
     } catch (e) {
       _logger.error('Authentication failed', e);
+      _appState?.updateCloudStatus(CloudStatus.disconnected);
       rethrow;
     }
   }

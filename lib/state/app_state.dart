@@ -6,16 +6,19 @@ import '../core/services/image_sync_service.dart';
 import '../core/services/image_storage_service.dart';
 import '../core/services/local_database_service.dart';
 import '../core/services/onedrive_service.dart';
+import '../core/services/service_factory.dart';
 import '../core/utils/logger.dart';
 import '../core/config/config.dart';
+
+// Cloud status enum
+enum CloudStatus { disconnected, connected, syncing }
 
 /// Main application state management class that handles all global state
 /// and provides methods for state manipulation and data operations.
 class AppState extends ChangeNotifier {
   // Service and utility instances
-  final DatabaseService _databaseService = DatabaseService();
   final _logger = AppLogger('AppState');
-  ImageSyncService? _imageSyncService;
+  final _serviceFactory = ServiceFactory();
 
   // State variables
   User? _currentUser;
@@ -24,6 +27,8 @@ class AppState extends ChangeNotifier {
   bool _isLoading = false;
   final int _refreshCounter = 0;
   String _currentLanguage = 'cs';
+  CloudStatus _cloudStatus = CloudStatus.disconnected;
+  bool _isSyncing = false;
 
   // Getters for state access
   User? get currentUser => _currentUser;
@@ -36,9 +41,36 @@ class AppState extends ChangeNotifier {
   bool get isPrivileged => _currentUser?.isPrivileged ?? false;
   // What is the user privilege level? -> 0 is visitor, 1 is builder, 2 is installer, 3 is admin
   int get currentUserPrivileges => _currentUser?.privileges ?? 0;
-  DatabaseService get databaseService => _databaseService;
+  DatabaseService get databaseService => _serviceFactory.databaseService;
+  ImageStorageService get imageStorageService =>
+      _serviceFactory.imageStorageService;
+  LocalDatabaseService get localDatabaseService =>
+      _serviceFactory.localDatabaseService;
+  OneDriveService get oneDriveService => _serviceFactory.oneDriveService;
+  ImageSyncService get imageSyncService => _serviceFactory.imageSyncService;
+  ServiceFactory get serviceFactory => _serviceFactory;
   int get refreshCounter => _refreshCounter;
   String get currentLanguage => _currentLanguage;
+  CloudStatus get cloudStatus => _cloudStatus;
+  bool get isSyncing => _isSyncing;
+
+  // Update cloud status
+  void updateCloudStatus(CloudStatus status) {
+    _cloudStatus = status;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
+  }
+
+  // Update sync status
+  void updateSyncStatus(bool isSyncing) {
+    _isSyncing = isSyncing;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
+  }
 
   /// Authenticates a user with the provided credentials and loads initial data
   ///
@@ -54,22 +86,21 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       });
 
+      // Initialize services if not already initialized
+      if (!_serviceFactory.isInitialized) {
+        await _serviceFactory.initialize(this);
+      }
+
       // Connect to the database and attempt authentication
-      await _databaseService.connect();
-      final user = await _databaseService.authenticateUser(username, password);
+      await _serviceFactory.databaseService.connect();
+      final user = await _serviceFactory.databaseService.authenticateUser(
+        username,
+        password,
+      );
 
       if (user != null) {
         _currentUser = user;
         _logger.info('User logged in successfully: ${user.username}');
-
-        // Initialize image sync service
-        _imageSyncService = ImageSyncService(
-          imageStorage: ImageStorageService(),
-          localDatabase: LocalDatabaseService(),
-          database: _databaseService,
-          oneDrive: OneDriveService(),
-        );
-
         await _loadInitialData(user);
         return true;
       }
@@ -113,14 +144,12 @@ class AppState extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // Dispose image sync service
-      _imageSyncService?.dispose();
-      _imageSyncService = null;
+      // Dispose services
+      await _serviceFactory.dispose();
 
       _currentUser = null;
       _installations = [];
       _users = [];
-      await _databaseService.disconnect();
 
       _logger.info('User logged out successfully');
     } catch (e, stackTrace) {
@@ -143,7 +172,8 @@ class AppState extends ChangeNotifier {
       });
 
       // Fetch installations from the database
-      _installations = await _databaseService.getAllInstallations();
+      _installations =
+          await _serviceFactory.databaseService.getAllInstallations();
       _logger.info(
         'Successfully loaded ${_installations.length} installations',
       );
@@ -175,7 +205,7 @@ class AppState extends ChangeNotifier {
       });
 
       // Fetch users from the database
-      _users = await _databaseService.getAllUsers();
+      _users = await _serviceFactory.databaseService.getAllUsers();
       _logger.info('Successfully loaded ${_users.length} users');
 
       // Schedule the final state update for the next frame
@@ -207,7 +237,7 @@ class AppState extends ChangeNotifier {
       });
 
       // Add the installation to the database and reload the list
-      await _databaseService.addFVEInstallation(installation);
+      await _serviceFactory.databaseService.addFVEInstallation(installation);
       await loadInstallations();
       _logger.info('Successfully added installation: ${installation.id}');
 
@@ -244,7 +274,7 @@ class AppState extends ChangeNotifier {
       });
 
       // Update the installation in the database and reload the list
-      await _databaseService.updateFVEInstallation(installation);
+      await _serviceFactory.databaseService.updateFVEInstallation(installation);
       await loadInstallations();
       _logger.info('Successfully updated installation: ${installation.id}');
 
@@ -281,7 +311,7 @@ class AppState extends ChangeNotifier {
       });
 
       // Add the user to the database and reload the list
-      await _databaseService.addUser(user);
+      await _serviceFactory.databaseService.addUser(user);
       await loadUsers();
       _logger.info('Successfully added user: ${user.username}');
 
@@ -314,7 +344,7 @@ class AppState extends ChangeNotifier {
       });
 
       // Update the user in the database and reload the list
-      await _databaseService.updateUser(user);
+      await _serviceFactory.databaseService.updateUser(user);
       await loadUsers();
       _logger.info('Successfully updated user: ${user.username}');
 
@@ -347,7 +377,7 @@ class AppState extends ChangeNotifier {
       });
 
       // Deactivate the user in the database and reload the list
-      await _databaseService.deactivateUser(userId);
+      await _serviceFactory.databaseService.deactivateUser(userId);
       await loadUsers();
       _logger.info('Successfully deactivated user with ID: $userId');
 
@@ -380,7 +410,7 @@ class AppState extends ChangeNotifier {
       });
 
       // Activate the user in the database and reload the list
-      await _databaseService.activateUser(userId);
+      await _serviceFactory.databaseService.activateUser(userId);
       await loadUsers();
       _logger.info('Successfully activated user with ID: $userId');
 

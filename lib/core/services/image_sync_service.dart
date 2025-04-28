@@ -8,6 +8,7 @@ import '../../core/services/onedrive_service.dart';
 import '../../core/utils/logger.dart';
 import '../../core/config/image_sync_config.dart';
 import '../../data/models/saved_image.dart';
+import '../../state/app_state.dart';
 
 /// Service class that coordinates between image storage, local database, cloud database, and OneDrive services.
 /// Handles synchronization of images between local storage and cloud storage.
@@ -16,6 +17,7 @@ class ImageSyncService {
   final LocalDatabaseService _localDatabase;
   final DatabaseService _database;
   final OneDriveService _oneDrive;
+  final AppState _appState;
   final _logger = AppLogger('ImageSyncService');
 
   Timer? _syncTimer;
@@ -26,10 +28,12 @@ class ImageSyncService {
     required LocalDatabaseService localDatabase,
     required DatabaseService database,
     required OneDriveService oneDrive,
+    required AppState appState,
   }) : _imageStorage = imageStorage,
        _localDatabase = localDatabase,
        _database = database,
-       _oneDrive = oneDrive {
+       _oneDrive = oneDrive,
+       _appState = appState {
     _startPeriodicSync();
   }
 
@@ -126,6 +130,7 @@ class ImageSyncService {
       }
 
       _activeUploads++;
+      _appState.updateCloudStatus(CloudStatus.syncing);
 
       try {
         // 1. Get local image data
@@ -141,6 +146,24 @@ class ImageSyncService {
 
         // Validate file
         await _validateFile(file);
+
+        // Check for existing image with same hash
+        final existingImages = await _database.getActiveImages();
+        final fileHash = await _imageStorage.calculateFileHash(file);
+        final existingImage = existingImages.firstWhere(
+          (img) => img.hash == fileHash,
+          orElse: () => null as SavedImage,
+        );
+
+        if (existingImage != null) {
+          _logger.info('Found existing image with same hash, binding to it');
+          // Update local database to point to existing cloud image
+          await _localDatabase.markImageAsUploaded(
+            localImageId,
+            existingImage.id,
+          );
+          return existingImage;
+        }
 
         // 2. Upload to OneDrive with retries
         String? oneDriveUrl;
@@ -177,7 +200,7 @@ class ImageSyncService {
           timeAdded: DateTime.parse(localImage['time_added'] as String),
           name: localImage['name'] as String?,
           userId: localImage['user_id'] as int,
-          hash: localImage['hash'] as int,
+          hash: fileHash,
           active: true,
         );
 
@@ -190,9 +213,13 @@ class ImageSyncService {
         return savedImage;
       } finally {
         _activeUploads--;
+        if (_activeUploads == 0) {
+          _appState.updateCloudStatus(CloudStatus.connected);
+        }
       }
     } catch (e, stackTrace) {
       _logger.error('Error uploading local image to cloud', e, stackTrace);
+      _appState.updateCloudStatus(CloudStatus.connected);
       return null;
     }
   }
@@ -201,6 +228,24 @@ class ImageSyncService {
   Future<File> downloadImage(SavedImage savedImage) async {
     try {
       _logger.info('Starting image download for image ID: ${savedImage.id}');
+      _appState.updateCloudStatus(CloudStatus.syncing);
+
+      // Check if image already exists locally with same hash
+      final localImages = await _localDatabase.getImagesByInstallationId(
+        savedImage.fveInstallationId,
+      );
+
+      final existingLocalImage = localImages.firstWhere(
+        (img) => img['hash'] == savedImage.hash,
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (existingLocalImage.isNotEmpty) {
+        _logger.info(
+          'Found existing local image with same hash, skipping download',
+        );
+        return File(existingLocalImage['local_path'] as String);
+      }
 
       // 1. Download from OneDrive
       final response = await _oneDrive.getInstallationImages(
@@ -234,9 +279,11 @@ class ImageSyncService {
       );
 
       _logger.info('Image download completed successfully');
+      _appState.updateCloudStatus(CloudStatus.connected);
       return File(localPath);
     } catch (e, stackTrace) {
       _logger.error('Error downloading image', e, stackTrace);
+      _appState.updateCloudStatus(CloudStatus.connected);
       rethrow;
     }
   }
@@ -245,15 +292,27 @@ class ImageSyncService {
   Future<void> syncUnuploadedImages() async {
     try {
       _logger.info('Starting sync of unuploaded images');
+      _appState.updateCloudStatus(CloudStatus.syncing);
 
       final unuploadedImages = await _localDatabase.getUnuploadedImages();
+      final processedHashes = <int>{};
+
       for (final image in unuploadedImages) {
         try {
+          // Skip if we've already processed an image with this hash
+          if (processedHashes.contains(image['hash'] as int)) {
+            _logger.info(
+              'Skipping duplicate image with hash: ${image['hash']}',
+            );
+            continue;
+          }
+
           final savedImage = await uploadLocalImageToCloud(
             localImageId: image['id'] as int,
           );
 
           if (savedImage != null) {
+            processedHashes.add(savedImage.hash);
             _logger.info(
               'Successfully synced image: ${image['id']} to cloud storage',
             );
@@ -269,8 +328,10 @@ class ImageSyncService {
       }
 
       _logger.info('Completed sync of unuploaded images');
+      _appState.updateCloudStatus(CloudStatus.connected);
     } catch (e, stackTrace) {
       _logger.error('Error syncing unuploaded images', e, stackTrace);
+      _appState.updateCloudStatus(CloudStatus.connected);
       rethrow;
     }
   }
@@ -279,23 +340,36 @@ class ImageSyncService {
   Future<void> syncCloudImages() async {
     try {
       _logger.info('Starting sync of cloud images to local storage');
+      _appState.updateCloudStatus(CloudStatus.syncing);
 
       // Get all active images from cloud database
       final cloudImages = await _database.getActiveImages();
+      final processedHashes = <int>{};
 
       for (final cloudImage in cloudImages) {
         try {
+          // Skip if we've already processed an image with this hash
+          if (processedHashes.contains(cloudImage.hash)) {
+            _logger.info(
+              'Skipping duplicate image with hash: ${cloudImage.hash}',
+            );
+            continue;
+          }
+
           // Check if image already exists locally
           final localImages = await _localDatabase.getImagesByInstallationId(
             cloudImage.fveInstallationId,
           );
 
           final existsLocally = localImages.any(
-            (img) => img['cloud_id'] == cloudImage.id,
+            (img) =>
+                img['cloud_id'] == cloudImage.id ||
+                img['hash'] == cloudImage.hash,
           );
 
           if (!existsLocally) {
             await downloadImage(cloudImage);
+            processedHashes.add(cloudImage.hash);
             _logger.info(
               'Successfully downloaded cloud image: ${cloudImage.id} to local storage',
             );
@@ -310,8 +384,10 @@ class ImageSyncService {
       }
 
       _logger.info('Completed sync of cloud images to local storage');
+      _appState.updateCloudStatus(CloudStatus.connected);
     } catch (e, stackTrace) {
       _logger.error('Error syncing cloud images', e, stackTrace);
+      _appState.updateCloudStatus(CloudStatus.connected);
       rethrow;
     }
   }
@@ -320,6 +396,7 @@ class ImageSyncService {
   Future<void> deleteImage(SavedImage savedImage) async {
     try {
       _logger.info('Starting image deletion for ID: ${savedImage.id}');
+      _appState.updateCloudStatus(CloudStatus.syncing);
 
       // 1. Delete from OneDrive
       final response = await _oneDrive.getInstallationImages(
@@ -364,8 +441,10 @@ class ImageSyncService {
       await _database.updateSavedImage(updatedImage);
 
       _logger.info('Image deletion completed successfully');
+      _appState.updateCloudStatus(CloudStatus.connected);
     } catch (e, stackTrace) {
       _logger.error('Error deleting image', e, stackTrace);
+      _appState.updateCloudStatus(CloudStatus.connected);
       rethrow;
     }
   }

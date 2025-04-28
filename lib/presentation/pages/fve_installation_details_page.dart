@@ -6,10 +6,10 @@ import '../../data/models/fve_installation.dart';
 import '../../data/models/required_image.dart';
 import '../../data/models/saved_image.dart';
 import '../../core/utils/logger.dart';
-import '../../core/services/onedrive_service.dart';
 import '../controllers/fve_installation_controller.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
+import '../../core/services/image_sync_service.dart';
 
 /// A page that displays detailed information about an FVE installation.
 /// Shows the installation's basic information and allows users to:
@@ -89,35 +89,31 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
 
       setState(() => _isLoading = true);
 
-      // Upload image to OneDrive
+      // Save image locally first
       final file = File(image.path);
-      final oneDriveService = OneDriveService();
-      final imageUrl = await oneDriveService.uploadInstallationImage(
-        widget.installation.id.toString(),
-        file,
+      final imageSyncService = _controller.appState.imageSyncService;
+
+      // Save image locally and get local image ID
+      final localImageId = await imageSyncService.saveImageLocally(
+        installationId: widget.installation.id,
+        requiredImageId: requiredImage.id,
+        sourceFile: file,
+        userId: _controller.currentUser?.id ?? 0,
+        name:
+            '${widget.installation.name}_${requiredImage.name}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      // Upload to cloud
+      final savedImage = await imageSyncService.uploadLocalImageToCloud(
+        localImageId: localImageId,
         description: requiredImage.name,
       );
 
-      // Calculate hash of the image file
-      final bytes = await file.readAsBytes();
-      final hash = bytes.fold<int>(0, (prev, byte) => prev + byte);
-
-      // Create and save the image record
-      final savedImage = SavedImage(
-        id: 0, // Will be set by database
-        fveInstallationId: widget.installation.id,
-        requiredImageId: requiredImage.id,
-        location: imageUrl,
-        timeAdded: DateTime.now(),
-        name:
-            '${widget.installation.name}_${requiredImage.name}_${DateTime.now().millisecondsSinceEpoch}',
-        userId: _controller.currentUser?.id ?? 0,
-        hash: hash,
-        active: true,
-      );
-
-      await _controller.saveImage(savedImage);
-      await _loadSavedImages();
+      if (savedImage != null) {
+        await _loadSavedImages();
+      } else {
+        _logger.warning('Failed to upload image to cloud');
+      }
     } catch (e) {
       _logger.error('Error uploading image', e);
     } finally {
@@ -285,28 +281,94 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
                       padding: const EdgeInsets.only(right: 8.0),
                       child: GestureDetector(
                         onTap: () => _showImageDialog(image),
-                        child: Stack(
-                          children: [
-                            Image.network(
-                              image.location ?? '',
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            ),
-                            if (!image.active)
-                              Container(
-                                width: 100,
-                                height: 100,
-                                color: Colors.black.withOpacity(0.5),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.block,
-                                    color: Colors.white,
-                                    size: 32,
+                        child: FutureBuilder<String?>(
+                          future: _controller.appState.imageStorageService
+                              .getLocalImagePath(
+                                installationId: widget.installation.id,
+                                requiredImageId: requiredImage.id,
+                                imageName: image.name ?? '',
+                              ),
+                          builder: (context, snapshot) {
+                            final bool hasLocalFile =
+                                snapshot.hasData && snapshot.data != null;
+                            final bool isUploading = image.location == null;
+                            final bool isSynced =
+                                image.location != null && hasLocalFile;
+
+                            return Stack(
+                              children: [
+                                // Main image
+                                if (hasLocalFile)
+                                  Image.file(
+                                    File(snapshot.data!),
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  )
+                                else
+                                  Image.network(
+                                    image.location ?? '',
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    color:
+                                        !hasLocalFile ? Colors.black54 : null,
+                                    colorBlendMode:
+                                        !hasLocalFile ? BlendMode.darken : null,
+                                  ),
+                                // Inactive overlay
+                                if (!image.active)
+                                  Container(
+                                    width: 100,
+                                    height: 100,
+                                    color: Colors.black.withAlpha(128),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.block,
+                                        color: Colors.white,
+                                        size: 32,
+                                      ),
+                                    ),
+                                  ),
+                                // Status indicator
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withAlpha(51),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        isUploading
+                                            ? Icons.upload
+                                            : isSynced
+                                            ? Icons.cloud_done
+                                            : Icons.cloud_off,
+                                        size: 16,
+                                        color:
+                                            isUploading
+                                                ? Colors.blue
+                                                : isSynced
+                                                ? Colors.green
+                                                : Colors.orange,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                              ],
+                            );
+                          },
                         ),
                       ),
                     );
@@ -327,10 +389,6 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
         // Trigger rebuild to show updated data
       });
     }
-  }
-
-  void _handleImageUpload(RequiredImage requiredImage) {
-    // Implementation of _handleImageUpload method
   }
 
   void _showImageDialog(SavedImage image) {

@@ -278,4 +278,35 @@ class ImageStorageService {
       rethrow;
     }
   }
+
+  /// Gets the local file path for an image by its name and required image type
+  Future<String?> getLocalImagePath({
+    required int installationId,
+    required int requiredImageId,
+    required String imageName,
+  }) async {
+    try {
+      final targetDir = await getRequiredImageDirectory(
+        installationId,
+        requiredImageId,
+      );
+      final files = await targetDir.list().toList();
+
+      for (final entity in files) {
+        if (entity is File &&
+            _isImageFile(entity.path) &&
+            path.basename(entity.path) == imageName) {
+          return entity.path;
+        }
+      }
+      return null;
+    } catch (e, stackTrace) {
+      _logger.error(
+        'Error getting local image path for installation: $installationId, required: $requiredImageId, name: $imageName',
+        e,
+        stackTrace,
+      );
+      return null;
+    }
+  }
 }
