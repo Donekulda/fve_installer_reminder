@@ -22,6 +22,12 @@ class SavedImage {
   /// ID of the user who added this image
   final int userId;
 
+  /// SHA-256 hash of the image for duplicate detection
+  final int hash;
+
+  /// Whether the image is active (1) or inactive (0)
+  final bool active;
+
   /// Creates a new SavedImage instance.
   ///
   /// [id] - Unique identifier for the saved image
@@ -31,6 +37,8 @@ class SavedImage {
   /// [timeAdded] - Timestamp when the image was added
   /// [name] - Display name of the image
   /// [userId] - ID of the user who added this image
+  /// [hash] - SHA-256 hash of the image for duplicate detection
+  /// [active] - Whether the image is active (true) or inactive (false)
   SavedImage({
     required this.id,
     required this.fveInstallationId,
@@ -39,6 +47,8 @@ class SavedImage {
     this.timeAdded,
     this.name,
     required this.userId,
+    required this.hash,
+    this.active = true,
   });
 
   /// Creates a SavedImage instance from a JSON map.
@@ -57,6 +67,8 @@ class SavedImage {
               : null,
       name: json['name'] as String?,
       userId: json['users_id'] as int,
+      hash: json['HASH'] as int,
+      active: json['active'] == 1,
     );
   }
 
@@ -72,6 +84,8 @@ class SavedImage {
       'timeAdded': timeAdded?.toIso8601String(),
       'name': name,
       'users_id': userId,
+      'HASH': hash,
+      'active': active ? 1 : 0,
     };
   }
 }

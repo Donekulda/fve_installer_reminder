@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import '../../../state/app_state.dart';
-import '../../../data/models/user.dart';
-import '../../widgets/app_top_bar.dart';
-import '../../../core/utils/logger.dart';
-import '../../../core/config/config.dart';
-import 'user_controller.dart';
+import '../../state/app_state.dart';
+import '../../data/models/user.dart';
+import '../widgets/app_top_bar.dart';
+import '../../core/utils/logger.dart';
+import '../../core/config/config.dart';
+import '../controllers/user_management_controller.dart';
 
 /// A page that displays and manages user accounts in the system.
 ///
@@ -389,9 +389,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
                                   // SuperAdmin can assign any privilege
                                   if (isSuperAdmin) return true;
                                   // Admin can assign any privilege except admin
-                                  if (isAdmin)
+                                  if (isAdmin) {
                                     return entry.key <
                                         Config.privilegeLevels['admin']!;
+                                  }
                                   // Others can't assign privileges
                                   return false;
                                 }).toList();

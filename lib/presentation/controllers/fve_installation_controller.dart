@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import '../../../state/app_state.dart';
-import '../../../data/models/fve_installation.dart';
-import '../../../data/models/required_image.dart';
-import '../../../data/models/saved_image.dart';
-import '../../../data/models/user.dart';
-import '../../../core/utils/logger.dart';
+import '../../state/app_state.dart';
+import '../../data/models/fve_installation.dart';
+import '../../data/models/required_image.dart';
+import '../../data/models/saved_image.dart';
+import '../../data/models/user.dart';
+import '../../core/utils/logger.dart';
 
 /// Controller class for managing FVE installation details and related operations.
 /// Handles all business logic for the installation details page, including:
@@ -196,6 +196,7 @@ class FVEInstallationController {
 
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
+    final minImagesController = TextEditingController(text: '1');
 
     if (!context.mounted) return;
 
@@ -206,18 +207,42 @@ class FVEInstallationController {
             title: Text(translate('fve.addRequiredImage')),
             content: Form(
               key: formKey,
-              child: TextFormField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: translate('fve.requiredImageName'),
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return translate('error.requiredImageNameNull');
-                  }
-                  return null;
-                },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: translate('fve.requiredImageName'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return translate('error.requiredImageNameNull');
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: minImagesController,
+                    decoration: InputDecoration(
+                      labelText: translate('fve.minImages'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return translate('error.minImagesNull');
+                      }
+                      final number = int.tryParse(value);
+                      if (number == null || number < 1) {
+                        return translate('error.minImagesInvalid');
+                      }
+                      return null;
+                    },
+                  ),
+                ],
               ),
             ),
             actions: [
@@ -232,6 +257,7 @@ class FVEInstallationController {
                   final newRequiredImage = RequiredImage(
                     id: 0, // Will be set by database
                     name: nameController.text,
+                    minImages: int.parse(minImagesController.text),
                   );
 
                   await appState.databaseService.addRequiredImage(

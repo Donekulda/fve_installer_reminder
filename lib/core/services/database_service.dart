@@ -226,9 +226,10 @@ class DatabaseService {
   Future<void> addRequiredImage(RequiredImage image) async {
     if (!_isConnected) throw Exception('Database not connected');
 
-    await _connection.query('INSERT INTO requiredImages (name) VALUES (?)', [
-      image.name,
-    ]);
+    await _connection.query(
+      'INSERT INTO requiredImages (name, min_images) VALUES (?, ?)',
+      [image.name, image.minImages],
+    );
   }
 
   /// Updates an existing required image type in the database.
@@ -236,10 +237,10 @@ class DatabaseService {
   Future<void> updateRequiredImage(RequiredImage image) async {
     if (!_isConnected) throw Exception('Database not connected');
 
-    await _connection.query('UPDATE requiredImages SET name = ? WHERE id = ?', [
-      image.name,
-      image.id,
-    ]);
+    await _connection.query(
+      'UPDATE requiredImages SET name = ?, min_images = ? WHERE id = ?',
+      [image.name, image.minImages, image.id],
+    );
   }
 
   // Saved Images operations
@@ -292,13 +293,15 @@ class DatabaseService {
     if (!_isConnected) throw Exception('Database not connected');
 
     await _connection.query(
-      'INSERT INTO savedImages (fveInstalations_id, requiredImages_id, location, timeAdded, name, users_id) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO savedImages (fveInstalations_id, requiredImages_id, location, timeAdded, name, HASH, active, users_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [
         image.fveInstallationId,
         image.requiredImageId,
         image.location,
         image.timeAdded?.toIso8601String(),
         image.name,
+        image.hash,
+        image.active ? 1 : 0,
         image.userId,
       ],
     );
@@ -310,11 +313,13 @@ class DatabaseService {
     if (!_isConnected) throw Exception('Database not connected');
 
     await _connection.query(
-      'UPDATE savedImages SET location = ?, timeAdded = ?, name = ? WHERE id = ?',
+      'UPDATE savedImages SET location = ?, timeAdded = ?, name = ?, HASH = ?, active = ? WHERE id = ?',
       [
         image.location,
         image.timeAdded?.toIso8601String(),
         image.name,
+        image.hash,
+        image.active ? 1 : 0,
         image.id,
       ],
     );

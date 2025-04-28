@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import '../../../state/app_state.dart';
-import '../../../core/utils/logger.dart';
+import '../../state/app_state.dart';
+import '../../core/utils/logger.dart';
 
 /// A controller class that manages the login functionality and form state.
 /// Handles user authentication, form validation, and error handling.

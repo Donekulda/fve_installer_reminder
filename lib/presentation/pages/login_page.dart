@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import '../../../state/app_state.dart';
-import '../../widgets/app_top_bar.dart';
-import '../../../core/utils/logger.dart';
-import 'login_controller.dart';
+import '../../state/app_state.dart';
+import '../widgets/app_top_bar.dart';
+import '../../core/utils/logger.dart';
+import '../controllers/login_controller.dart';
 
 /// A page that handles user authentication through a login form.
 /// Provides username and password fields with validation and error handling.

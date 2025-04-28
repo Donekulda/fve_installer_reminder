@@ -38,6 +38,7 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `FVEReminderApp`.`requiredImages` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NULL,
+  `min_images` int(11) NOT NULL DEFAULT 1 COMMENT 'Min ammount of required images that should be saved',
   PRIMARY KEY (`id`),
   UNIQUE INDEX `idrequiredImages_UNIQUE` (`id` ASC) VISIBLE)
 ENGINE = InnoDB;
@@ -73,6 +74,8 @@ CREATE TABLE IF NOT EXISTS `FVEReminderApp`.`savedImages` (
   `location` VARCHAR(200) NULL,
   `timeAdded` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `name` VARCHAR(50) NULL COMMENT 'filename should be based on installations name and date IDEALLY',
+  `HASH` int(11) NOT NULL COMMENT 'SHA-256 hash, to check for image duplicity.',
+  `active` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'As delete is disabled for security reasons, the app needs to check if the image should be ignored and deleted from cloud, for example when installer uploads wrong image, so that there isn''t data overclustering',
   `users_id` INT NOT NULL COMMENT 'User that added this image, to check for bad actors',
   PRIMARY KEY (`id`, `fveInstalations_id`, `requiredImages_id`),
   UNIQUE INDEX `idsavedImages_UNIQUE` (`id` ASC) VISIBLE,

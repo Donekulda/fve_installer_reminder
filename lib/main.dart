@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'state/app_state.dart';
-import 'presentation/pages/login/login_page.dart';
-import 'presentation/pages/home/home_page.dart';
-import 'presentation/pages/user_managment/user_management_page.dart';
+import 'presentation/pages/login_page.dart';
+import 'presentation/pages/home_page.dart';
+import 'presentation/pages/user_management_page.dart';
 import 'localization/app_localizations.dart';
 import 'core/utils/logger.dart';
 

@@ -43,8 +43,17 @@ class Config {
   /// Gets the name of a privilege level
   ///
   /// [privilegeLevel] The privilege level (0-4)
-  /// Returns the name of the privilege level, or 'unknown' if not found
+  /// Returns the name of the privilege level, or highest/lowest known privilege if out of range
   static String getPrivilegeName(int privilegeLevel) {
+    if (privilegeLevel < 0) {
+      return privilegeNames[0]!; // Return 'visitor' for negative levels
+    }
+
+    final maxLevel = privilegeNames.keys.reduce((a, b) => a > b ? a : b);
+    if (privilegeLevel > maxLevel) {
+      return privilegeNames[maxLevel]!; // Return highest privilege for levels above max
+    }
+
     return privilegeNames[privilegeLevel] ?? 'unknown';
   }
 

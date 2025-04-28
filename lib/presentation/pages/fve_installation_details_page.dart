@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../../../data/models/fve_installation.dart';
-import '../../../data/models/required_image.dart';
-import '../../../data/models/saved_image.dart';
-import '../../../core/utils/logger.dart';
-import '../../../core/services/onedrive_service.dart';
-import 'fve_instalation_controller.dart';
+import '../../data/models/fve_installation.dart';
+import '../../data/models/required_image.dart';
+import '../../data/models/saved_image.dart';
+import '../../core/utils/logger.dart';
+import '../../core/services/onedrive_service.dart';
+import '../controllers/fve_installation_controller.dart';
 import 'package:provider/provider.dart';
-import '../../../state/app_state.dart';
+import '../../state/app_state.dart';
 
 /// A page that displays detailed information about an FVE installation.
 /// Shows the installation's basic information and allows users to:
@@ -98,6 +98,10 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
         description: requiredImage.name,
       );
 
+      // Calculate hash of the image file
+      final bytes = await file.readAsBytes();
+      final hash = bytes.fold<int>(0, (prev, byte) => prev + byte);
+
       // Create and save the image record
       final savedImage = SavedImage(
         id: 0, // Will be set by database
@@ -108,6 +112,8 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
         name:
             '${widget.installation.name}_${requiredImage.name}_${DateTime.now().millisecondsSinceEpoch}',
         userId: _controller.currentUser?.id ?? 0,
+        hash: hash,
+        active: true,
       );
 
       await _controller.saveImage(savedImage);
@@ -230,6 +236,8 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
     bool canUpload,
   ) {
     final savedImages = _savedImages[requiredImage.id] ?? [];
+    final activeImages = savedImages.where((image) => image.active).length;
+    final isComplete = activeImages >= requiredImage.minImages;
 
     return Card(
       child: Padding(
@@ -237,15 +245,29 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              requiredImage.name ?? translate('fve.unnamed'),
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    requiredImage.name ?? translate('fve.unnamed'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  '$activeImages/${requiredImage.minImages}',
+                  style: TextStyle(
+                    color: isComplete ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             // Upload button - only for installers and above
             if (canUpload)
               ElevatedButton.icon(
-                onPressed: () => _handleImageUpload(requiredImage),
+                onPressed: () => _uploadImage(requiredImage),
                 icon: const Icon(Icons.upload),
                 label: Text(translate('fve.uploadImage')),
               ),
@@ -263,11 +285,28 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
                       padding: const EdgeInsets.only(right: 8.0),
                       child: GestureDetector(
                         onTap: () => _showImageDialog(image),
-                        child: Image.network(
-                          image.location ?? '',
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
+                        child: Stack(
+                          children: [
+                            Image.network(
+                              image.location ?? '',
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                            if (!image.active)
+                              Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.black.withOpacity(0.5),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.block,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     );
@@ -280,8 +319,14 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
     );
   }
 
-  void _showEditDialog(BuildContext context) {
-    // Implementation of _showEditDialog method
+  void _showEditDialog(BuildContext context) async {
+    await _controller.showEditInstallationDialog();
+    // Refresh the page to show updated data
+    if (mounted) {
+      setState(() {
+        // Trigger rebuild to show updated data
+      });
+    }
   }
 
   void _handleImageUpload(RequiredImage requiredImage) {

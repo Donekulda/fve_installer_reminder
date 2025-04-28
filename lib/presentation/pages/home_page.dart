@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import '../../../state/app_state.dart';
-import '../../../data/models/fve_installation.dart';
-import '../fve_instalation/fve_installation_details_page.dart';
-import '../../widgets/app_top_bar.dart';
-import '../../../core/utils/logger.dart';
-import 'home_controller.dart';
+import '../../state/app_state.dart';
+import '../../data/models/fve_installation.dart';
+import 'fve_installation_details_page.dart';
+import '../widgets/app_top_bar.dart';
+import '../../core/utils/logger.dart';
+import '../controllers/home_controller.dart';
 
 /// A page that displays a list of FVE installations and allows adding new ones.
 /// Uses Provider pattern for state management and handles user authentication.
@@ -79,36 +79,17 @@ class _HomePageState extends State<HomePage> {
                   subtitle: Text(
                     installation.address ?? translate('fve.noAddress'),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Edit button - only for builders and above
-                      if (canEdit)
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed:
-                              () => _showEditInstallationDialog(
-                                context,
-                                installation,
-                              ),
-                        ),
-                      // View details button - available to all users
-                      IconButton(
-                        icon: const Icon(Icons.visibility),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => InstallationDetailsPage(
-                                    installation: installation,
-                                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => InstallationDetailsPage(
+                              installation: installation,
                             ),
-                          );
-                        },
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             );
@@ -124,7 +105,7 @@ class _HomePageState extends State<HomePage> {
             }
 
             return FloatingActionButton(
-              onPressed: () => _showAddInstallationDialog(context),
+              onPressed: () => _controller.showAddInstallationDialog(),
               child: const Icon(Icons.add),
             );
           },
@@ -136,16 +117,5 @@ class _HomePageState extends State<HomePage> {
         body: Center(child: Text('Error loading home page')),
       );
     }
-  }
-
-  void _showEditInstallationDialog(
-    BuildContext context,
-    FVEInstallation installation,
-  ) {
-    // Implementation of _showEditInstallationDialog method
-  }
-
-  void _showAddInstallationDialog(BuildContext context) {
-    // Implementation of _showAddInstallationDialog method
   }
 }

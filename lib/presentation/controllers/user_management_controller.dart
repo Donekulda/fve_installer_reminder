@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import '../../../state/app_state.dart';
-import '../../../data/models/user.dart';
-import '../../../core/utils/logger.dart';
+import '../../state/app_state.dart';
+import '../../data/models/user.dart';
+import '../../core/utils/logger.dart';
 
 /// Controller class responsible for managing user-related operations.
 /// This class handles all business logic related to user management,
