@@ -28,8 +28,35 @@ class DatabaseCredentials {
   }
 }
 
+class OneDriveCredentials {
+  final String clientId;
+  final String tenantId;
+  final String redirectUri;
+  final String scope;
+  final String baseFolderPath;
+
+  OneDriveCredentials({
+    required this.clientId,
+    required this.tenantId,
+    required this.redirectUri,
+    required this.scope,
+    required this.baseFolderPath,
+  });
+
+  factory OneDriveCredentials.fromJson(Map<String, dynamic> json) {
+    return OneDriveCredentials(
+      clientId: json['clientId'],
+      tenantId: json['tenantId'],
+      redirectUri: json['redirectUri'],
+      scope: json['scope'],
+      baseFolderPath: json['baseFolderPath'],
+    );
+  }
+}
+
 class ConfigService {
   static DatabaseCredentials? _databaseCredentials;
+  static OneDriveCredentials? _oneDriveCredentials;
 
   static Future<DatabaseCredentials> getDatabaseCredentials() async {
     if (_databaseCredentials != null) {
@@ -37,7 +64,9 @@ class ConfigService {
     }
 
     try {
-      final String jsonString = await rootBundle.loadString('lib/data/config/credentials.json');
+      final String jsonString = await rootBundle.loadString(
+        'lib/data/config/credentials.json',
+      );
       final Map<String, dynamic> json = jsonDecode(jsonString);
       _databaseCredentials = DatabaseCredentials.fromJson(json['database']);
       return _databaseCredentials!;
@@ -45,4 +74,21 @@ class ConfigService {
       throw Exception('Failed to load database credentials: $e');
     }
   }
-} 
+
+  static Future<OneDriveCredentials> getOneDriveCredentials() async {
+    if (_oneDriveCredentials != null) {
+      return _oneDriveCredentials!;
+    }
+
+    try {
+      final String jsonString = await rootBundle.loadString(
+        'lib/data/config/credentials.json',
+      );
+      final Map<String, dynamic> json = jsonDecode(jsonString);
+      _oneDriveCredentials = OneDriveCredentials.fromJson(json['onedrive']);
+      return _oneDriveCredentials!;
+    } catch (e) {
+      throw Exception('Failed to load OneDrive credentials: $e');
+    }
+  }
+}

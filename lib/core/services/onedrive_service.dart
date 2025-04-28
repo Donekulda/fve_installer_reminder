@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:aad_oauth/aad_oauth.dart';
 import 'package:aad_oauth/model/config.dart';
 import 'package:path/path.dart' as path;
-import 'package:flutter/services.dart' show rootBundle;
+import '../config/config_service.dart';
 import '../utils/logger.dart';
 
 class OneDriveService {
@@ -32,17 +32,13 @@ class OneDriveService {
     try {
       _logger.info('Initializing OneDrive service');
 
-      // Load configuration from JSON file
-      final configJson = await rootBundle.loadString(
-        'lib/data/config/onedrive_config.json',
-      );
-      final config = json.decode(configJson) as Map<String, dynamic>;
-
-      _clientId = config['clientId'] as String;
-      _tenantId = config['tenantId'] as String;
-      _redirectUri = config['redirectUri'] as String;
-      _scope = config['scope'] as String;
-      _baseFolderPath = config['baseFolderPath'] as String;
+      // Load configuration from ConfigService
+      final credentials = await ConfigService.getOneDriveCredentials();
+      _clientId = credentials.clientId;
+      _tenantId = credentials.tenantId;
+      _redirectUri = credentials.redirectUri;
+      _scope = credentials.scope;
+      _baseFolderPath = credentials.baseFolderPath;
 
       _logger.debug(
         'Loaded configuration: clientId=${_clientId.substring(0, 4)}..., tenantId=${_tenantId.substring(0, 4)}...',

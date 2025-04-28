@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:path/path.dart' as path;
 import '../../core/services/image_storage_service.dart';
 import '../../core/services/local_database_service.dart';
 import '../../core/services/database_service.dart';
 import '../../core/services/onedrive_service.dart';
 import '../../core/utils/logger.dart';
+import '../../core/config/image_sync_config.dart';
 import '../../data/models/saved_image.dart';
 
 /// Service class that coordinates between image storage, local database, cloud database, and OneDrive services.
@@ -17,7 +19,7 @@ class ImageSyncService {
   final _logger = AppLogger('ImageSyncService');
 
   Timer? _syncTimer;
-  static const _syncInterval = Duration(minutes: 15); // Check every 15 minutes
+  int _activeUploads = 0;
 
   ImageSyncService({
     required ImageStorageService imageStorage,
@@ -34,15 +36,31 @@ class ImageSyncService {
   /// Starts periodic checking for unuploaded images
   void _startPeriodicSync() {
     _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(_syncInterval, (_) {
-      syncUnuploadedImages();
-    });
+    _syncTimer = Timer.periodic(
+      Duration(minutes: ImageSyncConfig.syncIntervalMinutes),
+      (_) => syncUnuploadedImages(),
+    );
   }
 
   /// Stops periodic checking
   void dispose() {
     _syncTimer?.cancel();
     _syncTimer = null;
+  }
+
+  /// Validates a file before processing
+  Future<void> _validateFile(File file) async {
+    // Check file size
+    final fileSize = await file.length();
+    if (fileSize > ImageSyncConfig.maxUploadSizeBytes) {
+      throw Exception(ImageSyncConfig.errorMaxSizeExceeded);
+    }
+
+    // Check file extension
+    final extension = path.extension(file.path).toLowerCase();
+    if (!ImageSyncConfig.allowedExtensions.contains(extension)) {
+      throw Exception(ImageSyncConfig.errorInvalidExtension);
+    }
   }
 
   /// Saves a new image to the local database
@@ -57,6 +75,9 @@ class ImageSyncService {
       _logger.info(
         'Saving image locally for installation: $installationId, required: $requiredImageId',
       );
+
+      // Validate file
+      await _validateFile(sourceFile);
 
       // 1. Save to local storage
       final localPath = await _imageStorage.saveImage(
@@ -95,44 +116,78 @@ class ImageSyncService {
         'Attempting to upload local image ID: $localImageId to cloud',
       );
 
-      // 1. Get local image data
-      final localImage = await _localDatabase.getImageById(localImageId);
-      if (localImage == null) {
-        throw Exception('Local image not found');
+      // Check concurrent uploads limit
+      if (_activeUploads >= ImageSyncConfig.maxConcurrentUploads) {
+        _logger.warning('Maximum concurrent uploads reached, queuing upload');
+        return null;
       }
 
-      final file = File(localImage['local_path'] as String);
-      if (!await file.exists()) {
-        throw Exception('Local file not found');
+      _activeUploads++;
+
+      try {
+        // 1. Get local image data
+        final localImage = await _localDatabase.getImageById(localImageId);
+        if (localImage == null) {
+          throw Exception('Local image not found');
+        }
+
+        final file = File(localImage['local_path'] as String);
+        if (!await file.exists()) {
+          throw Exception('Local file not found');
+        }
+
+        // Validate file
+        await _validateFile(file);
+
+        // 2. Upload to OneDrive with retries
+        String? oneDriveUrl;
+        int retryCount = 0;
+        while (retryCount < ImageSyncConfig.maxUploadRetries) {
+          try {
+            oneDriveUrl = await _oneDrive.uploadInstallationImage(
+              localImage['fve_installation_id'].toString(),
+              file,
+              description: description,
+            );
+            break;
+          } catch (e) {
+            retryCount++;
+            if (retryCount >= ImageSyncConfig.maxUploadRetries) {
+              throw Exception(ImageSyncConfig.errorUploadFailed);
+            }
+            await Future.delayed(
+              Duration(seconds: ImageSyncConfig.retryDelaySeconds),
+            );
+          }
+        }
+
+        if (oneDriveUrl == null) {
+          throw Exception(ImageSyncConfig.errorUploadFailed);
+        }
+
+        // 3. Save to cloud database
+        final savedImage = SavedImage(
+          id: 0, // Will be set by the database
+          fveInstallationId: localImage['fve_installation_id'] as int,
+          requiredImageId: localImage['required_image_id'] as int,
+          location: oneDriveUrl,
+          timeAdded: DateTime.parse(localImage['time_added'] as String),
+          name: localImage['name'] as String?,
+          userId: localImage['user_id'] as int,
+          hash: localImage['hash'] as int,
+          active: true,
+        );
+
+        await _database.saveImage(savedImage);
+
+        // 4. Update local database with cloud ID
+        await _localDatabase.markImageAsUploaded(localImageId, savedImage.id);
+
+        _logger.info('Local image uploaded to cloud successfully');
+        return savedImage;
+      } finally {
+        _activeUploads--;
       }
-
-      // 2. Upload to OneDrive
-      final oneDriveUrl = await _oneDrive.uploadInstallationImage(
-        localImage['fve_installation_id'].toString(),
-        file,
-        description: description,
-      );
-
-      // 3. Save to cloud database
-      final savedImage = SavedImage(
-        id: 0, // Will be set by the database
-        fveInstallationId: localImage['fve_installation_id'] as int,
-        requiredImageId: localImage['required_image_id'] as int,
-        location: oneDriveUrl,
-        timeAdded: DateTime.parse(localImage['time_added'] as String),
-        name: localImage['name'] as String?,
-        userId: localImage['user_id'] as int,
-        hash: localImage['hash'] as int,
-        active: true,
-      );
-
-      await _database.saveImage(savedImage);
-
-      // 4. Update local database with cloud ID
-      await _localDatabase.markImageAsUploaded(localImageId, savedImage.id);
-
-      _logger.info('Local image uploaded to cloud successfully');
-      return savedImage;
     } catch (e, stackTrace) {
       _logger.error('Error uploading local image to cloud', e, stackTrace);
       return null;
