@@ -41,13 +41,13 @@ class AppState extends ChangeNotifier {
   bool get isPrivileged => _currentUser?.isPrivileged ?? false;
   // What is the user privilege level? -> 0 is visitor, 1 is builder, 2 is installer, 3 is admin
   int get currentUserPrivileges => _currentUser?.privileges ?? 0;
-  DatabaseService get databaseService => _serviceFactory.databaseService;
+  DatabaseService get databaseService => _serviceFactory.databaseService!;
   ImageStorageService get imageStorageService =>
-      _serviceFactory.imageStorageService;
+      _serviceFactory.imageStorageService!;
   LocalDatabaseService get localDatabaseService =>
-      _serviceFactory.localDatabaseService;
-  OneDriveService get oneDriveService => _serviceFactory.oneDriveService;
-  ImageSyncService get imageSyncService => _serviceFactory.imageSyncService;
+      _serviceFactory.localDatabaseService!;
+  OneDriveService get oneDriveService => _serviceFactory.oneDriveService!;
+  ImageSyncService get imageSyncService => _serviceFactory.imageSyncService!;
   ServiceFactory get serviceFactory => _serviceFactory;
   int get refreshCounter => _refreshCounter;
   String get currentLanguage => _currentLanguage;
@@ -80,6 +80,7 @@ class AppState extends ChangeNotifier {
   Future<bool> login(String username, String password) async {
     try {
       _logger.debug('Attempting login for user: $username');
+      _logger.debug('Password length: ${password.length}');
       _isLoading = true;
       // Schedule the state update for the next frame to avoid build phase errors
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -88,11 +89,22 @@ class AppState extends ChangeNotifier {
 
       // Initialize services if not already initialized
       if (!_serviceFactory.isInitialized) {
+        _logger.debug('Service factory not initialized, initializing now');
         await _serviceFactory.initialize(this);
       }
 
+      // Verify required services are initialized
+      if (!_serviceFactory.isDatabaseServiceInitialized) {
+        _logger.error('Database service not initialized');
+        return false;
+      }
+
       // Connect to the database and attempt authentication
+      _logger.debug('Attempting to connect to database');
       await _serviceFactory.databaseService.connect();
+      _logger.debug(
+        'Database connection successful, attempting authentication',
+      );
       final user = await _serviceFactory.databaseService.authenticateUser(
         username,
         password,

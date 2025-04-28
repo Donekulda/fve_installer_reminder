@@ -9,7 +9,6 @@ import '../../core/utils/logger.dart';
 import '../controllers/fve_installation_controller.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
-import '../../core/services/image_sync_service.dart';
 
 /// A page that displays detailed information about an FVE installation.
 /// Shows the installation's basic information and allows users to:

@@ -37,15 +37,26 @@ class _LoginPageState extends State<LoginPage> {
   /// Handles the login process when the user submits the form
   /// Validates the form, attempts to log in, and handles success/failure
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      _logger.warning('Login form validation failed');
-      return;
-    }
+    try {
+      _logger.debug('Login form submission started');
+      _logger.debug('Username: ${_controller.usernameController.text}');
+      _logger.debug(
+        'Password length: ${_controller.passwordController.text.length}',
+      );
 
-    setState(() {});
-    await _controller.handleLogin(context);
-    if (mounted) {
+      if (!_formKey.currentState!.validate()) {
+        _logger.warning('Login form validation failed');
+        return;
+      }
+
+      _logger.debug('Form validation passed, proceeding with login');
       setState(() {});
+      await _controller.handleLogin(context);
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      _logger.error('Error in _handleLogin', e);
     }
   }
 
@@ -69,6 +80,10 @@ class _LoginPageState extends State<LoginPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Form(
                   key: _formKey,
+                  onChanged: () {
+                    _logger.debug('Form changed - validating');
+                    _formKey.currentState?.validate();
+                  },
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -114,8 +129,15 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           labelText: translate('auth.username'),
           border: const OutlineInputBorder(),
+          errorStyle: const TextStyle(color: Colors.red),
         ),
-        validator: _controller.validateUsername,
+        validator: (value) {
+          final error = _controller.validateUsername(value);
+          if (error != null) {
+            _logger.debug('Username validation error: $error');
+          }
+          return error;
+        },
       );
     } catch (e, stackTrace) {
       _logger.error('Error building username field', e, stackTrace);
@@ -137,9 +159,16 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           labelText: translate('auth.password'),
           border: const OutlineInputBorder(),
+          errorStyle: const TextStyle(color: Colors.red),
         ),
         obscureText: true,
-        validator: _controller.validatePassword,
+        validator: (value) {
+          final error = _controller.validatePassword(value);
+          if (error != null) {
+            _logger.debug('Password validation error: $error');
+          }
+          return error;
+        },
       );
     } catch (e, stackTrace) {
       _logger.error('Error building password field', e, stackTrace);
@@ -156,16 +185,12 @@ class _LoginPageState extends State<LoginPage> {
   /// Returns an ElevatedButton that triggers the login process
   Widget _buildLoginButton() {
     try {
-      return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: _controller.isLoading ? null : _handleLogin,
-          child:
-              _controller.isLoading
-                  ? const CircularProgressIndicator()
-                  : Text(translate('auth.login')),
-        ),
+      return ElevatedButton(
+        onPressed: () {
+          _logger.debug('Login button pressed - direct callback');
+          _handleLogin();
+        },
+        child: Text(translate('auth.login')),
       );
     } catch (e, stackTrace) {
       _logger.error('Error building login button', e, stackTrace);

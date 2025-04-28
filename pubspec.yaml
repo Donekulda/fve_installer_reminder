@@ -47,6 +47,7 @@ dependencies:
   logging: ^1.2.0
   http: ^1.2.0
   aad_oauth: ^1.0.0  # Microsoft Azure AD OAuth package
+  webview_flutter: ^4.7.0  # Required for aad_oauth
   url_launcher: ^6.2.5
   path: ^1.8.3
   sqflite: ^2.3.2  # SQLite database for local storage

@@ -40,10 +40,13 @@ class LoginController {
   Future<bool> handleLogin(BuildContext context) async {
     try {
       _logger.debug('Login attempt started');
+      _logger.debug('Username: ${usernameController.text}');
+      _logger.debug('Password length: ${passwordController.text.length}');
       isLoading = true;
 
       try {
         // Attempt to log in using AppState
+        _logger.debug('Calling AppState.login()');
         final success = await context.read<AppState>().login(
           usernameController.text,
           passwordController.text,
@@ -106,10 +109,12 @@ class LoginController {
   ///
   /// [value] - The username value to validate
   String? validateUsername(String? value) {
+    _logger.debug('Validating username: ${value ?? 'null'}');
     if (value == null || value.isEmpty) {
       _logger.debug('Username validation failed: empty value');
       return translate('error.usernameNull');
     }
+    _logger.debug('Username validation passed');
     return null;
   }
 
@@ -121,10 +126,14 @@ class LoginController {
   ///
   /// [value] - The password value to validate
   String? validatePassword(String? value) {
+    _logger.debug(
+      'Validating password: ${value != null ? '${value.length} characters' : 'null'}',
+    );
     if (value == null || value.isEmpty) {
       _logger.debug('Password validation failed: empty value');
       return translate('error.passwordNull');
     }
+    _logger.debug('Password validation passed');
     return null;
   }
 }
