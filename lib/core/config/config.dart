@@ -1,5 +1,16 @@
 class Config {
+  static const bool loggerOn = true; // Set to false in production
   static const bool debugLog = true; // Set to false in production
+  static const bool errorLog = true; // Set to false in production
+  static const bool infoLog = true; // Set to false in production
+  static const bool warningLog = true; // Set to false in production
+
+  static const bool saveLogToFile = false; // Set to false in production
+  static const int logBatchSize =
+      10; // Number of logs to batch together before writing to file
+  static const Duration logFlushInterval = Duration(
+    seconds: 5,
+  ); // How often to flush logs to file
 
   /// Map of privilege levels to their corresponding names
   static const Map<int, String> privilegeNames = {

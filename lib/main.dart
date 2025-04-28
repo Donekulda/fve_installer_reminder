@@ -18,7 +18,7 @@ void main() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     // Initialize logger first for proper error tracking
-    AppLogger.initialize();
+    await AppLogger.initialize();
     final logger = AppLogger('main');
     logger.info('Flutter binding initialized');
     logger.info('Starting application initialization');
@@ -42,6 +42,11 @@ void main() async {
       ),
     );
     logger.info('Application started successfully');
+
+    // Set up logger disposal when app is closing
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addObserver(_AppLifecycleObserver(logger));
+    });
   } catch (e, stackTrace) {
     // Handle initialization errors gracefully
     final logger = AppLogger('main');
@@ -54,6 +59,21 @@ void main() async {
         ),
       ),
     );
+  }
+}
+
+/// Observer to handle app lifecycle events and logger disposal
+class _AppLifecycleObserver with WidgetsBindingObserver {
+  final AppLogger _logger;
+
+  _AppLifecycleObserver(this._logger);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.detached) {
+      _logger.info('Application is closing, disposing logger...');
+      await AppLogger.dispose();
+    }
   }
 }
 
