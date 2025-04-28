@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../data/models/user.dart';
 import '../data/models/fve_installation.dart';
 import '../core/services/database_service.dart';
+import '../core/services/image_sync_service.dart';
+import '../core/services/image_storage_service.dart';
+import '../core/services/local_database_service.dart';
+import '../core/services/onedrive_service.dart';
 import '../core/utils/logger.dart';
 import '../core/config/config.dart';
 
@@ -11,6 +15,7 @@ class AppState extends ChangeNotifier {
   // Service and utility instances
   final DatabaseService _databaseService = DatabaseService();
   final _logger = AppLogger('AppState');
+  ImageSyncService? _imageSyncService;
 
   // State variables
   User? _currentUser;
@@ -56,6 +61,15 @@ class AppState extends ChangeNotifier {
       if (user != null) {
         _currentUser = user;
         _logger.info('User logged in successfully: ${user.username}');
+
+        // Initialize image sync service
+        _imageSyncService = ImageSyncService(
+          imageStorage: ImageStorageService(),
+          localDatabase: LocalDatabaseService(),
+          database: _databaseService,
+          oneDrive: OneDriveService(),
+        );
+
         await _loadInitialData(user);
         return true;
       }
@@ -98,6 +112,10 @@ class AppState extends ChangeNotifier {
       // Schedule the state update for the next frame
       _isLoading = true;
       notifyListeners();
+
+      // Dispose image sync service
+      _imageSyncService?.dispose();
+      _imageSyncService = null;
 
       _currentUser = null;
       _installations = [];

@@ -15,8 +15,8 @@ class ImageSyncConfig {
   /// Maximum number of concurrent uploads
   static const maxConcurrentUploads = 3;
 
-  /// Maximum file size for upload (10MB)
-  static const maxUploadSizeBytes = 10 * 1024 * 1024;
+  /// Maximum file size for upload (32MB)
+  static const maxUploadSizeBytes = 32 * 1024 * 1024;
 
   /// Allowed image file extensions
   static const List<String> allowedExtensions = [

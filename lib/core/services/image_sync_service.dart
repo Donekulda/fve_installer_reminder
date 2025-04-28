@@ -33,12 +33,15 @@ class ImageSyncService {
     _startPeriodicSync();
   }
 
-  /// Starts periodic checking for unuploaded images
+  /// Starts periodic checking for unuploaded images and cloud images
   void _startPeriodicSync() {
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(
       Duration(minutes: ImageSyncConfig.syncIntervalMinutes),
-      (_) => syncUnuploadedImages(),
+      (_) async {
+        await syncUnuploadedImages();
+        await syncCloudImages();
+      },
     );
   }
 
@@ -268,6 +271,47 @@ class ImageSyncService {
       _logger.info('Completed sync of unuploaded images');
     } catch (e, stackTrace) {
       _logger.error('Error syncing unuploaded images', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Syncs cloud images to local storage
+  Future<void> syncCloudImages() async {
+    try {
+      _logger.info('Starting sync of cloud images to local storage');
+
+      // Get all active images from cloud database
+      final cloudImages = await _database.getActiveImages();
+
+      for (final cloudImage in cloudImages) {
+        try {
+          // Check if image already exists locally
+          final localImages = await _localDatabase.getImagesByInstallationId(
+            cloudImage.fveInstallationId,
+          );
+
+          final existsLocally = localImages.any(
+            (img) => img['cloud_id'] == cloudImage.id,
+          );
+
+          if (!existsLocally) {
+            await downloadImage(cloudImage);
+            _logger.info(
+              'Successfully downloaded cloud image: ${cloudImage.id} to local storage',
+            );
+          }
+        } catch (e) {
+          _logger.error(
+            'Error syncing individual cloud image: ${cloudImage.id}',
+            e,
+          );
+          // Continue with next image
+        }
+      }
+
+      _logger.info('Completed sync of cloud images to local storage');
+    } catch (e, stackTrace) {
+      _logger.error('Error syncing cloud images', e, stackTrace);
       rethrow;
     }
   }

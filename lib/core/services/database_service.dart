@@ -325,6 +325,17 @@ class DatabaseService {
     );
   }
 
+  /// Retrieves all active images from the database.
+  /// Returns a list of all images that are marked as active.
+  Future<List<SavedImage>> getActiveImages() async {
+    if (!_isConnected) throw Exception('Database not connected');
+
+    final results = await _connection.query(
+      'SELECT * FROM savedImages WHERE active = 1',
+    );
+    return results.map((row) => SavedImage.fromJson(row.fields)).toList();
+  }
+
   /// Closes the database connection.
   /// Should be called when the application is shutting down.
   Future<void> disconnect() async {
