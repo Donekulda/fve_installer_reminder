@@ -1,6 +1,6 @@
 # FVE Installer Reminder
 
-A Flutter application for managing and tracking FVE (Photovoltaic Power Plant) installations.
+A Flutter application for managing and tracking FVE (Photovoltaic Power Plant) installations, in build phase.
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/Donekulda/fve_installer_reminder)
 
