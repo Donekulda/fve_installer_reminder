@@ -39,7 +39,12 @@ class FVEInstallationController {
   /// These are the types of images that need to be uploaded for an installation.
   Future<List<RequiredImage>> getRequiredImages() async {
     try {
-      return await appState.databaseService.getAllRequiredImages();
+      final dbService = appState.databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+      return await dbService.getAllRequiredImages();
     } catch (e) {
       _logger.error('Error getting required images', e);
       return [];
@@ -51,9 +56,12 @@ class FVEInstallationController {
   /// [requiredImageId] - The ID of the required image type to get saved images for
   Future<List<SavedImage>> getSavedImages(int requiredImageId) async {
     try {
-      return await appState.databaseService.getSavedImagesByRequiredImageId(
-        requiredImageId,
-      );
+      final dbService = appState.databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+      return await dbService.getSavedImagesByRequiredImageId(requiredImageId);
     } catch (e) {
       _logger.error('Error getting saved images', e);
       return [];
@@ -65,7 +73,12 @@ class FVEInstallationController {
   /// [image] - The saved image to store in the database
   Future<void> saveImage(SavedImage image) async {
     try {
-      await appState.databaseService.saveImage(image);
+      final dbService = appState.databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+      await dbService.saveImage(image);
     } catch (e) {
       _logger.error('Error saving image', e);
       rethrow;
@@ -260,9 +273,13 @@ class FVEInstallationController {
                     minImages: int.parse(minImagesController.text),
                   );
 
-                  await appState.databaseService.addRequiredImage(
-                    newRequiredImage,
-                  );
+                  final dbService = appState.databaseService;
+                  if (dbService == null) {
+                    _logger.error('Database service is null');
+                    throw Exception('Database service not initialized');
+                  }
+
+                  await dbService.addRequiredImage(newRequiredImage);
 
                   if (!context.mounted) return;
                   Navigator.pop(dialogContext);

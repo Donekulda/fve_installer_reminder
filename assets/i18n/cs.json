@@ -2,7 +2,8 @@
   "app": {
     "title": "FVE Instalátor Reminder",
     "language": "Jazyk",
-    "userManagement": "Správa uživatelů"
+    "userManagement": "Správa uživatelů",
+    "home": "Domů"
   },
   "common": {
     "save": "Uložit",
@@ -119,6 +120,17 @@
       "add": "Přidat požadovaný obrázek",
       "min_images_count": "Minimální počet obrázků: {count}",
       "delete_confirm": "Opravdu chcete smazat tento požadovaný obrázek?"
+    }
+  },
+  "services": {
+    "cloud": {
+      "disconnected": "Cloud: Odpojen",
+      "connected": "Cloud: Připojen",
+      "syncing": "Cloud: Synchronizace"
+    },
+    "database": {
+      "connected": "Databáze: Připojena",
+      "disconnected": "Databáze: Odpojena"
     }
   }
 } 

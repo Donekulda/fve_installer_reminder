@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../state/app_state.dart';
-import '../../data/models/fve_installation.dart';
 import 'fve_installation_details_page.dart';
 import '../widgets/app_top_bar.dart';
 import '../../core/utils/logger.dart';

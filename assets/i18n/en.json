@@ -2,7 +2,8 @@
   "app": {
     "title": "FVE Installer Reminder",
     "language": "Language",
-    "userManagement": "User Management"
+    "userManagement": "User Management",
+    "home": "Home"
   },
   "common": {
     "save": "Save",
@@ -120,6 +121,17 @@
       "add": "Add required image",
       "min_images_count": "Minimum number of images: {count}",
       "delete_confirm": "Are you sure you want to delete this required image?"
+    }
+  },
+  "services": {
+    "cloud": {
+      "disconnected": "Cloud: Disconnected",
+      "connected": "Cloud: Connected",
+      "syncing": "Cloud: Syncing"
+    },
+    "database": {
+      "connected": "Database: Connected",
+      "disconnected": "Database: Disconnected"
     }
   }
 } 

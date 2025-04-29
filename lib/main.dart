@@ -27,12 +27,26 @@ void main() async {
     final delegate = await AppLocalizations.initialize();
     logger.info('Localization initialized successfully');
 
+    // Create AppState instance
+    final appState = AppState();
+
+    // Initialize database connection
+    logger.info('Initializing database connection');
+    final dbInitialized = await appState.initializeDatabase();
+    if (!dbInitialized) {
+      logger.warning(
+        'Database initialization failed, but continuing with application startup',
+      );
+    } else {
+      logger.info('Database connection established successfully');
+    }
+
     // Run the application with providers for state management
     runApp(
       MultiProvider(
         providers: [
           // Provide AppState for global state management
-          ChangeNotifierProvider(create: (_) => AppState()),
+          ChangeNotifierProvider.value(value: appState),
           // Provide language notifier for localization
           ChangeNotifierProvider.value(
             value: AppLocalizations.languageNotifier,
@@ -45,7 +59,9 @@ void main() async {
 
     // Set up logger disposal when app is closing
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addObserver(_AppLifecycleObserver(logger));
+      WidgetsBinding.instance.addObserver(
+        _AppLifecycleObserver(logger, appState),
+      );
     });
   } catch (e, stackTrace) {
     // Handle initialization errors gracefully
@@ -65,14 +81,24 @@ void main() async {
 /// Observer to handle app lifecycle events and logger disposal
 class _AppLifecycleObserver with WidgetsBindingObserver {
   final AppLogger _logger;
+  final AppState _appState;
 
-  _AppLifecycleObserver(this._logger);
+  _AppLifecycleObserver(this._logger, this._appState);
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.detached) {
-      _logger.info('Application is closing, disposing logger...');
+      _logger.info('Application is closing, cleaning up resources...');
+
+      // Clean up database connection
+      _logger.info('Cleaning up database connection');
+      await _appState.cleanupDatabase();
+
+      // Dispose logger
+      _logger.info('Disposing logger...');
       await AppLogger.dispose();
+
+      _logger.info('Application cleanup completed');
     }
   }
 }

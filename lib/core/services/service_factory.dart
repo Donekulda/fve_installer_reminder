@@ -6,6 +6,36 @@ import 'onedrive_service.dart';
 import '../../state/app_state.dart';
 import '../utils/logger.dart';
 
+/// Result of a service initialization attempt
+class ServiceInitializationResult<T> {
+  final T? service;
+  final bool success;
+  final String? errorMessage;
+  final dynamic error;
+
+  ServiceInitializationResult({
+    this.service,
+    required this.success,
+    this.errorMessage,
+    this.error,
+  });
+
+  factory ServiceInitializationResult.success(T service) {
+    return ServiceInitializationResult(service: service, success: true);
+  }
+
+  factory ServiceInitializationResult.failure({
+    String? errorMessage,
+    dynamic error,
+  }) {
+    return ServiceInitializationResult(
+      success: false,
+      errorMessage: errorMessage,
+      error: error,
+    );
+  }
+}
+
 /// Factory class that manages singleton instances of services that require
 /// constant running and synchronization.
 class ServiceFactory {
@@ -23,21 +53,26 @@ class ServiceFactory {
   OneDriveService? _oneDriveService;
 
   // Track initialization status
-  final Map<String, bool> _initializationStatus = {};
+  final Map<String, ServiceInitializationResult> _initializationResults = {};
 
-  // Getters for service instances
-  ImageSyncService get imageSyncService => _imageSyncService!;
-  ImageStorageService get imageStorageService => _imageStorageService!;
-  LocalDatabaseService get localDatabaseService => _localDatabaseService!;
-  DatabaseService get databaseService => _databaseService!;
-  OneDriveService get oneDriveService => _oneDriveService!;
+  // Getters for service instances with null safety
+  ImageSyncService? get imageSyncService => _imageSyncService;
+  ImageStorageService? get imageStorageService => _imageStorageService;
+  LocalDatabaseService? get localDatabaseService => _localDatabaseService;
+  DatabaseService? get databaseService => _databaseService;
+  OneDriveService? get oneDriveService => _oneDriveService;
 
   // Service-specific initialization checks
-  bool get isDatabaseServiceInitialized => _databaseService != null;
-  bool get isImageStorageServiceInitialized => _imageStorageService != null;
-  bool get isLocalDatabaseServiceInitialized => _localDatabaseService != null;
-  bool get isOneDriveServiceInitialized => _oneDriveService != null;
-  bool get isImageSyncServiceInitialized => _imageSyncService != null;
+  bool get isDatabaseServiceInitialized =>
+      _initializationResults['DatabaseService']?.success ?? false;
+  bool get isImageStorageServiceInitialized =>
+      _initializationResults['ImageStorageService']?.success ?? false;
+  bool get isLocalDatabaseServiceInitialized =>
+      _initializationResults['LocalDatabaseService']?.success ?? false;
+  bool get isOneDriveServiceInitialized =>
+      _initializationResults['OneDriveService']?.success ?? false;
+  bool get isImageSyncServiceInitialized =>
+      _initializationResults['ImageSyncService']?.success ?? false;
 
   /// Initializes all services with required dependencies.
   /// Should be called once during app startup.
@@ -45,67 +80,128 @@ class ServiceFactory {
     _logger.info('Initializing service factory');
 
     // Initialize services independently
-    await _initializeService('DatabaseService', () async {
-      _databaseService = DatabaseService();
-    });
+    await _initializeService<ImageStorageService>(
+      'ImageStorageService',
+      () async {
+        final service = ImageStorageService();
+        return ServiceInitializationResult.success(service);
+      },
+    );
 
-    await _initializeService('ImageStorageService', () async {
-      _imageStorageService = ImageStorageService();
-    });
+    await _initializeService<LocalDatabaseService>(
+      'LocalDatabaseService',
+      () async {
+        final service = LocalDatabaseService();
+        return ServiceInitializationResult.success(service);
+      },
+    );
 
-    await _initializeService('LocalDatabaseService', () async {
-      _localDatabaseService = LocalDatabaseService();
-    });
-
-    await _initializeService('OneDriveService', () async {
-      _oneDriveService = OneDriveService();
-      await _oneDriveService!.initialize();
-    });
-
-    // Initialize image sync service if all required dependencies are available
-    if (_imageStorageService != null &&
-        _localDatabaseService != null &&
-        _databaseService != null &&
-        _oneDriveService != null) {
-      await _initializeService('ImageSyncService', () async {
-        _imageSyncService = ImageSyncService(
-          imageStorage: _imageStorageService!,
-          localDatabase: _localDatabaseService!,
-          database: _databaseService!,
-          oneDrive: _oneDriveService!,
-          appState: appState,
+    await _initializeService<OneDriveService>('OneDriveService', () async {
+      final service = OneDriveService();
+      try {
+        await service.initialize();
+        return ServiceInitializationResult.success(service);
+      } catch (e, stackTrace) {
+        _logger.warning(
+          'OneDrive service initialization failed, but continuing with other services',
         );
+        return ServiceInitializationResult.failure(
+          errorMessage: 'Failed to initialize OneDrive service',
+          error: e,
+        );
+      }
+    });
+
+    // Initialize image sync service only if all required dependencies are available
+    // and OneDrive service is successfully initialized
+    if (isImageStorageServiceInitialized &&
+        isLocalDatabaseServiceInitialized &&
+        isOneDriveServiceInitialized &&
+        appState.databaseService != null) {
+      await _initializeService<ImageSyncService>('ImageSyncService', () async {
+        try {
+          final service = ImageSyncService(
+            imageStorage: _imageStorageService!,
+            localDatabase: _localDatabaseService!,
+            database: appState.databaseService!, // We know it's not null here
+            oneDrive: _oneDriveService!,
+            appState: appState,
+          );
+          return ServiceInitializationResult.success(service);
+        } catch (e, stackTrace) {
+          _logger.warning(
+            'ImageSync service initialization failed, but continuing with other services',
+          );
+          return ServiceInitializationResult.failure(
+            errorMessage: 'Failed to initialize ImageSync service',
+            error: e,
+          );
+        }
       });
     } else {
       _logger.warning(
         'ImageSyncService not initialized due to missing dependencies',
       );
-      _initializationStatus['ImageSyncService'] = false;
+      _initializationResults['ImageSyncService'] =
+          ServiceInitializationResult.failure(
+            errorMessage: 'Missing required dependencies',
+          );
     }
 
     // Log initialization status
     _logInitializationStatus();
   }
 
-  Future<void> _initializeService(
+  Future<void> _initializeService<T>(
     String serviceName,
-    Future<void> Function() initFunction,
+    Future<ServiceInitializationResult<T>> Function() initFunction,
   ) async {
     try {
-      await initFunction();
-      _initializationStatus[serviceName] = true;
-      _logger.info('$serviceName initialized successfully');
+      final result = await initFunction();
+      _initializationResults[serviceName] = result;
+
+      if (result.success && result.service != null) {
+        switch (serviceName) {
+          case 'DatabaseService':
+            _databaseService = result.service as DatabaseService;
+            break;
+          case 'ImageStorageService':
+            _imageStorageService = result.service as ImageStorageService;
+            break;
+          case 'LocalDatabaseService':
+            _localDatabaseService = result.service as LocalDatabaseService;
+            break;
+          case 'OneDriveService':
+            _oneDriveService = result.service as OneDriveService;
+            break;
+          case 'ImageSyncService':
+            _imageSyncService = result.service as ImageSyncService;
+            break;
+        }
+        _logger.info('$serviceName initialized successfully');
+      } else {
+        _logger.error(
+          'Failed to initialize $serviceName: ${result.errorMessage}',
+          result.error,
+        );
+        await _cleanup(serviceName);
+      }
     } catch (e, stackTrace) {
-      _logger.error('Failed to initialize $serviceName', e, stackTrace);
-      _initializationStatus[serviceName] = false;
+      _logger.error('Error during $serviceName initialization', e, stackTrace);
+      _initializationResults[serviceName] = ServiceInitializationResult.failure(
+        errorMessage: 'Unexpected error during initialization',
+        error: e,
+      );
       await _cleanup(serviceName);
     }
   }
 
   void _logInitializationStatus() {
     _logger.info('Service initialization status:');
-    _initializationStatus.forEach((service, status) {
-      _logger.info('$service: ${status ? "Initialized" : "Failed"}');
+    _initializationResults.forEach((service, result) {
+      _logger.info(
+        '$service: ${result.success ? "Initialized" : "Failed"}${result.errorMessage != null ? " - ${result.errorMessage}" : ""}',
+      );
     });
   }
 
@@ -151,7 +247,7 @@ class ServiceFactory {
       _localDatabaseService = null;
       _imageStorageService = null;
       _databaseService = null;
-      _initializationStatus.clear();
+      _initializationResults.clear();
 
       _logger.info('Service factory disposed successfully');
     } catch (e, stackTrace) {
@@ -162,11 +258,18 @@ class ServiceFactory {
 
   /// Checks if all services are properly initialized
   bool get isInitialized {
-    return _initializationStatus.values.every((status) => status);
+    return _initializationResults.values.every((result) => result.success);
   }
 
   /// Gets the initialization status of a specific service
   bool isServiceInitialized(String serviceName) {
-    return _initializationStatus[serviceName] ?? false;
+    return _initializationResults[serviceName]?.success ?? false;
+  }
+
+  /// Gets the initialization result for a specific service
+  ServiceInitializationResult? getServiceInitializationResult(
+    String serviceName,
+  ) {
+    return _initializationResults[serviceName];
   }
 }

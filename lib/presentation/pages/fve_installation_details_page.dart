@@ -91,6 +91,10 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
       // Save image locally first
       final file = File(image.path);
       final imageSyncService = _controller.appState.imageSyncService;
+      if (imageSyncService == null) {
+        _logger.error('Image sync service is null');
+        throw Exception('Image sync service not initialized');
+      }
 
       // Save image locally and get local image ID
       final localImageId = await imageSyncService.saveImageLocally(
@@ -282,7 +286,7 @@ class _InstallationDetailsPageState extends State<InstallationDetailsPage> {
                         onTap: () => _showImageDialog(image),
                         child: FutureBuilder<String?>(
                           future: _controller.appState.imageStorageService
-                              .getLocalImagePath(
+                              ?.getLocalImagePath(
                                 installationId: widget.installation.id,
                                 requiredImageId: requiredImage.id,
                                 imageName: image.name ?? '',

@@ -34,10 +34,14 @@ class DatabaseService {
       _connection = await MySqlConnection.connect(settings);
       _isConnected = true;
       _logger.info('Successfully connected to database');
-    } catch (e) {
+    } catch (e, stackTrace) {
       _isConnected = false;
-      _logger.error('Failed to connect to database', e);
-      rethrow;
+      _logger.error(
+        'Failed to connect to database: ${e.toString()}',
+        e,
+        stackTrace,
+      );
+      throw Exception('Failed to connect to database: ${e.toString()}');
     }
   }
 

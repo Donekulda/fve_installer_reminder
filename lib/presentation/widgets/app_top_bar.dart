@@ -1,12 +1,13 @@
+// lib/widgets/app_top_bar.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../../state/app_state.dart';
 import '../../core/utils/logger.dart';
 import 'language_selector.dart';
+import 'service_indicator_widget.dart';
 
-/// A custom app bar widget that provides the main navigation and actions for the application.
-/// It includes language selection, user management (for admin users), and logout functionality.
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   const AppTopBar({super.key});
 
@@ -17,30 +18,42 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final logger = AppLogger('AppTopBar');
     try {
-      // Use Consumer to rebuild only when app state changes
       return Consumer<AppState>(
         builder: (context, appState, child) {
-          // Get current user state
           final isLoggedIn = appState.isLoggedIn;
           final isAdmin = appState.hasRequiredPrivilege('admin');
 
           return AppBar(
-            title: Text(translate('app.title')),
-            leading: _buildCloudStatusIndicator(appState),
+            leading: const ServiceIndicatorWidget(),
+            title: const SizedBox(), // Placeholder to keep space
+            centerTitle: true,
+            flexibleSpace: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (isLoggedIn)
+                  Align(
+                    alignment: Alignment.center,
+                    child: IconButton(
+                      icon: const Icon(Icons.home),
+                      tooltip: translate('app.home'),
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/');
+                      },
+                    ),
+                  ),
+              ],
+            ),
             actions: [
-              // Language selector is always visible
               const LanguageSelector(),
-              // Only show these actions if user is logged in
               if (isLoggedIn) ...[
-                // Required image models management - only visible for admin users
                 if (isAdmin)
-                  TextButton(
+                  IconButton(
+                    icon: const Icon(Icons.format_list_bulleted),
+                    tooltip: translate('required_images.management.title'),
                     onPressed: () {
                       Navigator.pushNamed(context, '/required-image-managment');
                     },
-                    child: Text(translate('required_images.management.title')),
                   ),
-                // User management - only visible for admin users
                 if (isAdmin)
                   IconButton(
                     icon: const Icon(Icons.people),
@@ -49,12 +62,10 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                       Navigator.pushNamed(context, '/users');
                     },
                   ),
-                // Logout - only visible when logged in
                 IconButton(
                   icon: const Icon(Icons.logout),
                   tooltip: translate('auth.logout'),
                   onPressed: () {
-                    // Show confirmation dialog before logout
                     showDialog(
                       context: context,
                       builder:
@@ -62,15 +73,12 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                             title: Text(translate('logout.confirm')),
                             content: Text(translate('logout.message')),
                             actions: [
-                              // Cancel button
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
                                 child: Text(translate('common.cancel')),
                               ),
-                              // Confirm button
                               TextButton(
                                 onPressed: () {
-                                  // Perform logout and close dialog
                                   context.read<AppState>().logout();
                                   Navigator.pop(context);
                                 },
@@ -90,43 +98,5 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       logger.error('Error building AppTopBar', e, stackTrace);
       return AppBar(title: const Text('Error'));
     }
-  }
-
-  Widget _buildCloudStatusIndicator(AppState appState) {
-    Color iconColor;
-    Widget icon;
-
-    switch (appState.cloudStatus) {
-      case CloudStatus.disconnected:
-        iconColor = Colors.red;
-        icon = const Icon(Icons.cloud_off);
-        break;
-      case CloudStatus.connected:
-        iconColor = Colors.blue;
-        icon = const Icon(Icons.cloud);
-        break;
-      case CloudStatus.syncing:
-        iconColor = Colors.green;
-        icon = Stack(
-          alignment: Alignment.center,
-          children: [
-            const Icon(Icons.cloud),
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-            ),
-          ],
-        );
-        break;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: IconTheme(data: IconThemeData(color: iconColor), child: icon),
-    );
   }
 }

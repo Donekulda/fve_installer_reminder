@@ -20,6 +20,10 @@ class AppState extends ChangeNotifier {
   final _logger = AppLogger('AppState');
   final _serviceFactory = ServiceFactory();
 
+  // Direct database connection for testing
+  DatabaseService? _directDatabaseService;
+  bool _isDirectDatabaseConnected = false;
+
   // State variables
   User? _currentUser;
   List<FVEInstallation> _installations = [];
@@ -41,14 +45,44 @@ class AppState extends ChangeNotifier {
   bool get isPrivileged => _currentUser?.isPrivileged ?? false;
   // What is the user privilege level? -> 0 is visitor, 1 is builder, 2 is installer, 3 is admin
   int get currentUserPrivileges => _currentUser?.privileges ?? 0;
-  DatabaseService get databaseService => _serviceFactory.databaseService!;
-  ImageStorageService get imageStorageService =>
-      _serviceFactory.imageStorageService!;
-  LocalDatabaseService get localDatabaseService =>
-      _serviceFactory.localDatabaseService!;
-  OneDriveService get oneDriveService => _serviceFactory.oneDriveService!;
-  ImageSyncService get imageSyncService => _serviceFactory.imageSyncService!;
+
+  // Service accessors with null safety
+  DatabaseService? get databaseService {
+    if (!Config.enableDatabaseService) {
+      return null;
+    }
+    return Config.useDirectDatabaseConnection
+        ? _directDatabaseService
+        : _serviceFactory.databaseService;
+  }
+
+  ImageStorageService? get imageStorageService =>
+      _serviceFactory.imageStorageService;
+  LocalDatabaseService? get localDatabaseService =>
+      _serviceFactory.localDatabaseService;
+  OneDriveService? get oneDriveService => _serviceFactory.oneDriveService;
+  ImageSyncService? get imageSyncService => _serviceFactory.imageSyncService;
   ServiceFactory get serviceFactory => _serviceFactory;
+
+  // Service initialization status
+  bool get isDatabaseServiceInitialized {
+    if (!Config.enableDatabaseService) {
+      return false;
+    }
+    return Config.useDirectDatabaseConnection
+        ? _isDirectDatabaseConnected
+        : _serviceFactory.isDatabaseServiceInitialized;
+  }
+
+  bool get isImageStorageServiceInitialized =>
+      _serviceFactory.isImageStorageServiceInitialized;
+  bool get isLocalDatabaseServiceInitialized =>
+      _serviceFactory.isLocalDatabaseServiceInitialized;
+  bool get isOneDriveServiceInitialized =>
+      _serviceFactory.isOneDriveServiceInitialized;
+  bool get isImageSyncServiceInitialized =>
+      _serviceFactory.isImageSyncServiceInitialized;
+
   int get refreshCounter => _refreshCounter;
   String get currentLanguage => _currentLanguage;
   CloudStatus get cloudStatus => _cloudStatus;
@@ -72,6 +106,62 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  /// Initializes the database connection based on configuration
+  Future<bool> initializeDatabase() async {
+    try {
+      _logger.debug('Initializing database connection');
+
+      if (!Config.enableDatabaseService) {
+        _logger.info('Database service is disabled in configuration');
+        return false;
+      }
+
+      if (Config.useDirectDatabaseConnection) {
+        _logger.debug('Initializing direct database connection');
+        _directDatabaseService = DatabaseService();
+        try {
+          await _directDatabaseService!.connect();
+          _isDirectDatabaseConnected = true;
+          _logger.info('Direct database connection established');
+          return true;
+        } catch (e, stackTrace) {
+          _logger.error(
+            'Failed to establish direct database connection',
+            e,
+            stackTrace,
+          );
+          return false;
+        }
+      } else {
+        _logger.debug('Using service factory database connection');
+        if (!_serviceFactory.isDatabaseServiceInitialized) {
+          _logger.error('Database service not initialized');
+          return false;
+        }
+        return true;
+      }
+    } catch (e, stackTrace) {
+      _logger.error('Error initializing database', e, stackTrace);
+      return false;
+    }
+  }
+
+  /// Cleans up database connections
+  Future<void> cleanupDatabase() async {
+    try {
+      _logger.debug('Cleaning up database connections');
+
+      if (Config.useDirectDatabaseConnection && _isDirectDatabaseConnected) {
+        await _directDatabaseService?.disconnect();
+        _directDatabaseService = null;
+        _isDirectDatabaseConnected = false;
+        _logger.info('Direct database connection closed');
+      }
+    } catch (e, stackTrace) {
+      _logger.error('Error cleaning up database connections', e, stackTrace);
+    }
+  }
+
   /// Authenticates a user with the provided credentials and loads initial data
   ///
   /// [username] - The username to authenticate
@@ -87,28 +177,15 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       });
 
-      // Initialize services if not already initialized
-      if (!_serviceFactory.isInitialized) {
-        _logger.debug('Service factory not initialized, initializing now');
-        await _serviceFactory.initialize(this);
-      }
-
-      // Verify required services are initialized
-      if (!_serviceFactory.isDatabaseServiceInitialized) {
-        _logger.error('Database service not initialized');
+      // Connect to the database and attempt authentication
+      _logger.debug('Attempting to connect to database');
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
         return false;
       }
 
-      // Connect to the database and attempt authentication
-      _logger.debug('Attempting to connect to database');
-      await _serviceFactory.databaseService.connect();
-      _logger.debug(
-        'Database connection successful, attempting authentication',
-      );
-      final user = await _serviceFactory.databaseService.authenticateUser(
-        username,
-        password,
-      );
+      final user = await dbService.authenticateUser(username, password);
 
       if (user != null) {
         _currentUser = user;
@@ -156,6 +233,9 @@ class AppState extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      // Clean up database connections
+      //await cleanupDatabase();
+
       // Dispose services
       await _serviceFactory.dispose();
 
@@ -184,8 +264,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Fetch installations from the database
-      _installations =
-          await _serviceFactory.databaseService.getAllInstallations();
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      _installations = await dbService.getAllInstallations();
       _logger.info(
         'Successfully loaded ${_installations.length} installations',
       );
@@ -217,7 +302,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Fetch users from the database
-      _users = await _serviceFactory.databaseService.getAllUsers();
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      _users = await dbService.getAllUsers();
       _logger.info('Successfully loaded ${_users.length} users');
 
       // Schedule the final state update for the next frame
@@ -249,7 +340,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Add the installation to the database and reload the list
-      await _serviceFactory.databaseService.addFVEInstallation(installation);
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      await dbService.addFVEInstallation(installation);
       await loadInstallations();
       _logger.info('Successfully added installation: ${installation.id}');
 
@@ -286,7 +383,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Update the installation in the database and reload the list
-      await _serviceFactory.databaseService.updateFVEInstallation(installation);
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      await dbService.updateFVEInstallation(installation);
       await loadInstallations();
       _logger.info('Successfully updated installation: ${installation.id}');
 
@@ -323,7 +426,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Add the user to the database and reload the list
-      await _serviceFactory.databaseService.addUser(user);
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      await dbService.addUser(user);
       await loadUsers();
       _logger.info('Successfully added user: ${user.username}');
 
@@ -356,7 +465,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Update the user in the database and reload the list
-      await _serviceFactory.databaseService.updateUser(user);
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      await dbService.updateUser(user);
       await loadUsers();
       _logger.info('Successfully updated user: ${user.username}');
 
@@ -389,7 +504,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Deactivate the user in the database and reload the list
-      await _serviceFactory.databaseService.deactivateUser(userId);
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      await dbService.deactivateUser(userId);
       await loadUsers();
       _logger.info('Successfully deactivated user with ID: $userId');
 
@@ -422,7 +543,13 @@ class AppState extends ChangeNotifier {
       });
 
       // Activate the user in the database and reload the list
-      await _serviceFactory.databaseService.activateUser(userId);
+      final dbService = databaseService;
+      if (dbService == null) {
+        _logger.error('Database service is null');
+        throw Exception('Database service not initialized');
+      }
+
+      await dbService.activateUser(userId);
       await loadUsers();
       _logger.info('Successfully activated user with ID: $userId');
 
@@ -503,5 +630,12 @@ class AppState extends ChangeNotifier {
       _logger.error('Error getting privilege name', e, stackTrace);
       return 'unknown';
     }
+  }
+
+  @override
+  void dispose() {
+    _logger.debug('Disposing AppState');
+    cleanupDatabase();
+    super.dispose();
   }
 }

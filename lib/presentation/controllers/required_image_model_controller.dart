@@ -12,7 +12,12 @@ class RequiredImageModelController {
   late final RequiredImageRepository _repository;
 
   RequiredImageModelController(this._appState) {
-    _repository = RequiredImageRepository(_appState.databaseService);
+    final dbService = _appState.databaseService;
+    if (dbService == null) {
+      _logger.error('Database service is null');
+      throw Exception('Database service not initialized');
+    }
+    _repository = RequiredImageRepository(dbService);
   }
 
   /// Checks if the current user has admin privileges

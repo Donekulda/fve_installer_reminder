@@ -12,6 +12,12 @@ class Config {
     seconds: 5,
   ); // How often to flush logs to file
 
+  // Database configuration
+  static const bool useDirectDatabaseConnection =
+      true; // Set to false to use service factory database - in production set to false
+  static const bool enableDatabaseService =
+      true; // Set to false to disable database service completely
+
   /// Map of privilege levels to their corresponding names
   static const Map<int, String> privilegeNames = {
     0: 'visitor',
