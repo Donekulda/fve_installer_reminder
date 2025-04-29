@@ -1,0 +1,100 @@
+# This workflow performs CodeQL analysis on the Flutter project
+# CodeQL is a semantic code analysis engine that can identify security vulnerabilities
+# and coding errors in your codebase. For Flutter projects, it analyzes both
+# the Dart source code and the JavaScript/TypeScript code generated for web platforms.
+name: "CodeQL Analysis"
+
+on:
+  # Trigger on push to main branch to ensure all new code is analyzed
+  push:
+    branches: [ "main" ]
+  # Trigger on pull requests to main branch to catch issues before merging
+  pull_request:
+    branches: [ "main" ]
+  # Run weekly on Fridays at 4:35 UTC to catch any issues that might have been missed
+  # This helps maintain code quality over time
+  schedule:
+    - cron: '35 4 * * 5'
+  # Allow manual triggering of the workflow
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze
+    # Use Ubuntu latest runner for consistent environment
+    # CodeQL works best on Linux-based runners
+    runs-on: ubuntu-latest
+    
+    # Required permissions for CodeQL analysis
+    # These permissions are necessary for the workflow to function properly
+    permissions:
+      security-events: write  # Required to upload analysis results to GitHub
+      actions: read           # Required to read workflow files and configurations
+      contents: read          # Required to read repository contents for analysis
+      packages: read          # Required to read package dependencies for analysis
+
+    strategy:
+      # Don't fail the entire workflow if one language analysis fails
+      # This allows other language analyses to complete
+      fail-fast: false
+      matrix:
+        # Analyze both Dart and JavaScript/TypeScript code
+        language: ['dart', 'javascript-typescript']
+
+    steps:
+    # Checkout the repository code to the runner
+    # This is required for any analysis to take place
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Set up Flutter environment
+    # This ensures we have the correct Flutter version and channel
+    # The Flutter setup is necessary for building the web version
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.0'  # Specify exact version for consistency
+        channel: 'stable'         # Use stable channel for reliability
+
+    # Install project dependencies
+    # This step is crucial as it ensures all required packages are available
+    # for the build process and analysis
+    - name: Install dependencies
+      run: flutter pub get
+
+    # Build the web version of the app
+    # This step is necessary to generate the JavaScript code that CodeQL will analyze
+    - name: Build web version
+      run: flutter build web --release
+
+    # Initialize CodeQL analysis
+    # This step sets up the CodeQL environment and prepares for analysis
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        # Use security-extended query pack for more comprehensive analysis
+        # This includes additional security checks beyond the default set
+        queries: security-extended
+        # Add custom query paths for Flutter-specific analysis
+        paths: |
+          lib/
+          web/
+        # Exclude generated files and dependencies
+        paths-ignore: |
+          build/
+          .dart_tool/
+          .pub-cache/
+
+    # Run the CodeQL analysis
+    # This step performs the actual code analysis and generates results
+    # The results will be available in the GitHub Security tab
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        # Categorize results by language for better organization
+        category: "/language:${{matrix.language}}"
+        # Add severity levels to help prioritize issues
+        severity: critical,high,medium,low
+        # Add tags to help categorize issues
+        tags: security,flutter,web 
