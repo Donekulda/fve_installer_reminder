@@ -83,11 +83,13 @@ git clone https://github.com/Donekulda/fve_installer_reminder.git
 flutter pub get
 ```
 
-3. Configure credentials in the app settings
+3. Upload the db_structure.sqk into the database
+   
+4. Configure credentials in the app settings
 
-4. Check config files in lib/core/config
+5. Check config files in lib/core/config
 
-5. Run the app:
+6. Run the app:
 ```bash
 flutter run
 ```
