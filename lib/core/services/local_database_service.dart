@@ -15,6 +15,13 @@ class LocalDatabaseService {
   /// Logger instance
   final _logger = AppLogger('LocalDatabaseService');
 
+  /// Custom database path for testing
+  final String? _customDatabasePath;
+
+  /// Constructor that optionally accepts a custom database path for testing
+  LocalDatabaseService({String? databasePath})
+    : _customDatabasePath = databasePath;
+
   /// Gets the database instance, creating it if it doesn't exist
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -24,8 +31,7 @@ class LocalDatabaseService {
 
   /// Initializes the database and creates necessary tables
   Future<Database> _initDatabase() async {
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = join(documentsDirectory.path, _databaseName);
+    final path = _customDatabasePath ?? await _getDefaultDatabasePath();
 
     return await openDatabase(
       path,
@@ -33,6 +39,12 @@ class LocalDatabaseService {
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+  }
+
+  /// Gets the default database path in the application documents directory
+  Future<String> _getDefaultDatabasePath() async {
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    return join(documentsDirectory.path, _databaseName);
   }
 
   /// Creates the database tables

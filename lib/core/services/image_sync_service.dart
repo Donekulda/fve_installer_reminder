@@ -9,6 +9,7 @@ import '../../core/utils/logger.dart';
 import '../../core/config/image_sync_config.dart';
 import '../../data/models/saved_image.dart';
 import '../../state/app_state.dart';
+import 'package:collection/collection.dart';
 
 /// Service class that coordinates between image storage, local database, cloud database, and OneDrive services.
 /// Handles synchronization of images between local storage and cloud storage.
@@ -150,9 +151,8 @@ class ImageSyncService {
         // Check for existing image with same hash
         final existingImages = await _database.getActiveImages();
         final fileHash = await _imageStorage.calculateFileHash(file);
-        final existingImage = existingImages.firstWhere(
+        final existingImage = existingImages.firstWhereOrNull(
           (img) => img.hash == fileHash,
-          orElse: () => null as SavedImage,
         );
 
         if (existingImage != null) {
